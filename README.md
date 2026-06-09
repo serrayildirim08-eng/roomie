@@ -1,36 +1,47 @@
 # Roomie
 
-Shared-house operating system for roommates. Tracks **fairness in two currencies**:
+Shared-house operating system for roommates — a **React Native (Expo)** phone app
+for iPhone + Android. Tracks **fairness in two currencies**:
 
-- 💸 **Money** — who paid for what, who owes whom (in EUR), à la Splitwise.
-- 🧹 **Effort** — whose turn it is for shopping / cleaning / cooking, and who actually did it.
+- 💸 **Money** — who paid for what, who owes whom (EUR), à la Splitwise.
+- 🧹 **Effort** — whose turn it is for chores / shopping / cooking, and who actually did it.
 
-Same job both ways: _"is everyone pulling their weight?"_ — without points, leaderboards, or shame.
-
-**Wedge:** one sentence → many places. _"Bought milk, €5"_ → adds milk to the shared pantry **and** logs the expense, in one go.
+Same job both ways: _"is everyone pulling their weight?"_ — without points, streaks, or shame.
+Photo/OCR and one-line text capture are **facilitators** (formless input), not the point.
 
 ## Status
 
-Early. Dogfood-first: built for one real flat (Rotterdam) before it ships to anyone else.
+Early — Foundation phase. Dogfood-first: built for one real flat (Rotterdam) before anyone else.
+Build order is foundation-first (see `docs/ROADMAP_ELI5.md`): get a working shared app, then
+layer the richer features (calendar, personal tasks, favors, OCR) on top.
 
 ## Stack
 
-- Vite + React + TypeScript (strict)
-- ESLint (flat config, mirrors the Ollie repo so vendored modules drop in clean) + Prettier
-- pnpm
+- **React Native + Expo** (expo-router, TypeScript strict) — one codebase, iPhone + Android
+- **InstantDB** — shared backend: database + auth + realtime sync (set up in Phase 1)
+- ESLint (eslint-config-expo, flat) + Prettier
+- npm
 
 ## Scripts
 
 ```bash
-pnpm install
-pnpm dev           # local dev server
-pnpm typecheck     # tsc
-pnpm lint          # eslint
-pnpm format        # prettier --write
-pnpm build         # typecheck + production build
+npm install
+npm start          # Expo dev server (open in Expo Go on your phone)
+npm run ios        # iOS simulator
+npm run android    # Android emulator
+npm run typecheck  # tsc --noEmit
+npm run lint       # expo lint
+npm run format     # prettier --write
 ```
 
-## Scope (v1)
+## v1 scope (foundation)
 
-In: expense split (EUR) · shared pantry/groceries (+ Feed Me recipe vote) · chore/shopping/cooking rota with "who did it".
-Out (for now): rent/bills, calendar, separate chat, gamification, in-app payments.
+In: users · households · invite link · activity feed · manual expense split (EUR, equal) ·
+shared pantry + shopping list · basic chores with rotation + history · AI/OCR **drafts that
+require confirmation before saving**.
+
+Later (post-foundation): personal tasks · need-a-favor · absence delegation · advanced
+calendar · payback/fairness logic · meal voting · advanced Feed Me · rent/bills · native
+store release.
+
+The full plan, in plain English: [`docs/ROADMAP_ELI5.md`](docs/ROADMAP_ELI5.md).

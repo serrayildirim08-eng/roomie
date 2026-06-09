@@ -1,52 +1,24 @@
-// Flat ESLint config for Roomie.
+// Flat ESLint config for Roomie (Expo / React Native).
+// https://docs.expo.dev/guides/using-eslint/
 //
-// Mirrors Ollie's rule choices so code vendored from the Ollie repo (pantry,
-// finance, Feed Me, L1 routing) lints clean here without churn. Stylistic
-// rules are deferred to Prettier (eslint-config-prettier turns them off).
-//
-// Philosophy: high-value bug catchers are errors; noisy-on-a-real-codebase
-// rules are warnings (a ratchet, not a gate that walls you in red).
+// eslint-config-expo gives RN/Expo-aware rules; eslint-config-prettier (last)
+// turns off stylistic rules Prettier owns so the two never fight.
 
-import js from '@eslint/js';
-import globals from 'globals';
-import reactHooks from 'eslint-plugin-react-hooks';
-import reactRefresh from 'eslint-plugin-react-refresh';
-import tseslint from 'typescript-eslint';
-import prettier from 'eslint-config-prettier';
-import { defineConfig, globalIgnores } from 'eslint/config';
+const { defineConfig } = require('eslint/config');
+const expoConfig = require('eslint-config-expo/flat');
+const prettier = require('eslint-config-prettier');
 
-export default defineConfig([
-  globalIgnores(['dist', 'build', 'coverage', 'node_modules', '**/*.d.ts']),
+module.exports = defineConfig([
+  expoConfig,
+  prettier,
   {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-      prettier, // turns off stylistic rules Prettier owns — keep last
-    ],
-    languageOptions: {
-      globals: globals.browser,
-    },
+    ignores: ['dist/*', 'node_modules/*', '.expo/*'],
+  },
+  {
+    // Advisory, not a bug-catcher: the setState-in-effect hydration pattern is
+    // legitimate (and used by Expo's own template). Warn, don't fail the gate.
     rules: {
-      // React hooks safety: conditional-hook bugs are real → error;
-      // exhaustive-deps is advisory → warn.
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-
-      // High-value bug catchers stay errors.
-      'no-debugger': 'error',
-      'no-constant-condition': ['error', { checkLoops: false }],
-
-      // Noisy-on-a-real-codebase rules → warnings (ratchet, not a wall).
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': [
-        'warn',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },
-      ],
-      '@typescript-eslint/no-non-null-assertion': 'off',
-      'no-empty': ['warn', { allowEmptyCatch: true }],
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
 ]);
