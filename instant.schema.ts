@@ -32,6 +32,7 @@ const _schema = i.schema({
     memberships: i.entity({
       role: i.string(), // 'owner' | 'member'
       status: i.string(), // 'active' | 'invited' | 'removed'
+      displayName: i.string().optional(), // denormalized name for member lists
       joinedAt: i.date().indexed(),
     }),
 
@@ -39,6 +40,21 @@ const _schema = i.schema({
     activityEvents: i.entity({
       type: i.string(), // e.g. 'expense_added', 'chore_done', 'pantry_added'
       metadata: i.json().optional(),
+      createdAt: i.date().indexed(),
+    }),
+
+    // Money — a shared expense (Splitwise-style core). v1 = equal split.
+    expenses: i.entity({
+      title: i.string(),
+      amountCents: i.number(), // store money in cents to avoid float errors
+      currency: i.string(), // 'EUR'
+      createdAt: i.date().indexed(),
+    }),
+
+    // Money — a payback from one member to another (settle up).
+    settlements: i.entity({
+      amountCents: i.number(),
+      currency: i.string(),
       createdAt: i.date().indexed(),
     }),
   },
@@ -67,6 +83,32 @@ const _schema = i.schema({
     activityActor: {
       forward: { on: 'activityEvents', has: 'one', label: 'actor' },
       reverse: { on: '$users', has: 'many', label: 'actorEvents' },
+    },
+
+    // Money links.
+    expenseHousehold: {
+      forward: { on: 'expenses', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'expenses' },
+    },
+    expensePaidBy: {
+      forward: { on: 'expenses', has: 'one', label: 'paidBy' },
+      reverse: { on: '$users', has: 'many', label: 'expensesPaid' },
+    },
+    expenseParticipants: {
+      forward: { on: 'expenses', has: 'many', label: 'participants' },
+      reverse: { on: '$users', has: 'many', label: 'expensesIn' },
+    },
+    settlementHousehold: {
+      forward: { on: 'settlements', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'settlements' },
+    },
+    settlementFrom: {
+      forward: { on: 'settlements', has: 'one', label: 'fromUser' },
+      reverse: { on: '$users', has: 'many', label: 'settlementsOut' },
+    },
+    settlementTo: {
+      forward: { on: 'settlements', has: 'one', label: 'toUser' },
+      reverse: { on: '$users', has: 'many', label: 'settlementsIn' },
     },
   },
 });

@@ -84,7 +84,7 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
           .update({ name: trimmed, createdAt: now })
           .link({ creator: userId }),
         db.tx.memberships[membershipId]
-          .update({ role: 'owner', status: 'active', joinedAt: now })
+          .update({ role: 'owner', status: 'active', displayName: userName, joinedAt: now })
           .link({ household: householdId, user: userId }),
       ]);
       await logActivity({
@@ -142,7 +142,7 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
       const membershipId = id();
       await db.transact(
         db.tx.memberships[membershipId]
-          .update({ role: 'member', status: 'active', joinedAt: Date.now() })
+          .update({ role: 'member', status: 'active', displayName: userName, joinedAt: Date.now() })
           .link({ household: trimmed, user: userId }),
       );
       await logActivity({

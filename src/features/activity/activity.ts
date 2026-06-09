@@ -9,7 +9,21 @@ import { id } from '@instantdb/react-native';
 
 import { db } from '@/lib/db';
 
-export type ActivityType = 'household_created' | 'member_joined';
+export type ActivityType = 'household_created' | 'member_joined' | 'expense_added' | 'debt_settled';
+
+function eur(metadata: unknown): string {
+  const cents =
+    metadata && typeof metadata === 'object' && 'amountCents' in metadata
+      ? Number((metadata as { amountCents?: unknown }).amountCents)
+      : NaN;
+  return Number.isFinite(cents) ? `€${(cents / 100).toFixed(2)}` : '';
+}
+
+function metaString(metadata: unknown, key: string): string | null {
+  return metadata && typeof metadata === 'object' && key in metadata
+    ? String((metadata as Record<string, unknown>)[key])
+    : null;
+}
 
 export async function logActivity(params: {
   householdId: string;
@@ -43,6 +57,17 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
       return { icon: '🏠', text: `${who} created the home` };
     case 'member_joined':
       return { icon: '👋', text: `${who} joined` };
+    case 'expense_added': {
+      const title = metaString(metadata, 'title');
+      return {
+        icon: '💸',
+        text: `${who} added ${title ? `"${title}"` : 'an expense'} — ${eur(metadata)}`,
+      };
+    }
+    case 'debt_settled': {
+      const to = metaString(metadata, 'toName') ?? 'someone';
+      return { icon: '✅', text: `${who} paid ${to} ${eur(metadata)}` };
+    }
     default:
       return { icon: '•', text: `${who} did something` };
   }
