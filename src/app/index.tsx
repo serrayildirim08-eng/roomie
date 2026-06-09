@@ -6,9 +6,18 @@ import { useAuth, useUser } from '@clerk/expo';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { db } from '@/lib/db';
+
 export default function HomeScreen() {
   const { user } = useUser();
   const { signOut } = useAuth();
+  const { user: instantUser, isLoading: instantLoading } = db.useAuth();
+
+  const instantStatus = instantLoading
+    ? 'connecting…'
+    : instantUser
+      ? '✓ connected'
+      : 'not connected';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -16,6 +25,7 @@ export default function HomeScreen() {
         <Text style={styles.hello}>Hi {user?.username ?? 'there'} 👋</Text>
         <Text style={styles.sub}>You&apos;re signed in. The foundation works.</Text>
         <Text style={styles.note}>Next: create or join a household.</Text>
+        <Text style={styles.instant}>InstantDB: {instantStatus}</Text>
 
         <Pressable style={styles.signout} onPress={() => signOut()}>
           <Text style={styles.signoutLabel}>Sign out</Text>
@@ -31,6 +41,7 @@ const styles = StyleSheet.create({
   hello: { fontSize: 30, fontWeight: '700', color: '#111' },
   sub: { fontSize: 16, color: '#666' },
   note: { fontSize: 14, color: '#9b9b9b', marginTop: 4 },
+  instant: { fontSize: 13, color: '#2e8b57', marginTop: 8 },
   signout: { marginTop: 28, alignSelf: 'flex-start' },
   signoutLabel: { fontSize: 15, color: '#c0392b', fontWeight: '600' },
 });
