@@ -21,7 +21,7 @@ export default function HomeScreen() {
         {instantLoading ? (
           <Text style={styles.note}>Connecting…</Text>
         ) : instantUser ? (
-          <HouseholdGate userId={instantUser.id} />
+          <HouseholdGate userId={instantUser.id} userName={user?.username ?? 'Someone'} />
         ) : (
           <Text style={styles.note}>InstantDB not connected yet.</Text>
         )}

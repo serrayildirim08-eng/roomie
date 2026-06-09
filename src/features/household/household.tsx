@@ -8,8 +8,10 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { db } from '@/lib/db';
+import { logActivity } from '@/features/activity/activity';
+import { ActivityFeed } from '@/features/activity/activity-feed';
 
-export function HouseholdGate({ userId }: { userId: string }) {
+export function HouseholdGate({ userId, userName }: { userId: string; userName: string }) {
   const { isLoading, error, data } = db.useQuery({
     memberships: {
       $: { where: { 'user.id': userId, status: 'active' } },
@@ -36,17 +38,21 @@ export function HouseholdGate({ userId }: { userId: string }) {
   const household = membership?.household;
 
   if (!household) {
-    return <NoHousehold userId={userId} />;
+    return <NoHousehold userId={userId} userName={userName} />;
   }
 
   return <HouseholdHome name={household.name} role={membership.role} code={household.id} />;
 }
 
-function NoHousehold({ userId }: { userId: string }) {
+function NoHousehold({ userId, userName }: { userId: string; userName: string }) {
   const [mode, setMode] = useState<'create' | 'join'>('create');
   return (
     <View style={styles.block}>
-      {mode === 'create' ? <CreateHousehold userId={userId} /> : <JoinHousehold userId={userId} />}
+      {mode === 'create' ? (
+        <CreateHousehold userId={userId} userName={userName} />
+      ) : (
+        <JoinHousehold userId={userId} userName={userName} />
+      )}
       <Pressable onPress={() => setMode(mode === 'create' ? 'join' : 'create')} style={styles.link}>
         <Text style={styles.linkLabel}>
           {mode === 'create' ? 'Have a code? Join a home' : 'Create a home instead'}
@@ -56,7 +62,7 @@ function NoHousehold({ userId }: { userId: string }) {
   );
 }
 
-function CreateHousehold({ userId }: { userId: string }) {
+function CreateHousehold({ userId, userName }: { userId: string; userName: string }) {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +87,12 @@ function CreateHousehold({ userId }: { userId: string }) {
           .update({ role: 'owner', status: 'active', joinedAt: now })
           .link({ household: householdId, user: userId }),
       ]);
+      await logActivity({
+        householdId,
+        actorId: userId,
+        actorName: userName,
+        type: 'household_created',
+      });
     } catch {
       setError('Could not create your home. Try again.');
     } finally {
@@ -106,7 +118,7 @@ function CreateHousehold({ userId }: { userId: string }) {
   );
 }
 
-function JoinHousehold({ userId }: { userId: string }) {
+function JoinHousehold({ userId, userName }: { userId: string; userName: string }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,6 +145,12 @@ function JoinHousehold({ userId }: { userId: string }) {
           .update({ role: 'member', status: 'active', joinedAt: Date.now() })
           .link({ household: trimmed, user: userId }),
       );
+      await logActivity({
+        householdId: trimmed,
+        actorId: userId,
+        actorName: userName,
+        type: 'member_joined',
+      });
     } catch {
       setError('Could not join. Check the code and try again.');
     } finally {
@@ -184,6 +202,8 @@ function HouseholdHome({ name, role, code }: { name: string; role: string; code:
           <Text style={styles.copyLabel}>{copied ? 'Copied ✓' : 'Copy code'}</Text>
         </Pressable>
       </View>
+
+      <ActivityFeed householdId={code} />
     </View>
   );
 }
