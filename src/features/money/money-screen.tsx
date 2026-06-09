@@ -18,7 +18,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { logActivity } from '@/features/activity/activity';
 import { db } from '@/lib/db';
 
-import { computeNetCents, formatEur, parseAmountToCents, simplifyDebts } from './money-logic';
+import {
+  computeNetCents,
+  formatEur,
+  nowMs,
+  parseAmountToCents,
+  simplifyDebts,
+} from './money-logic';
 
 export function MoneyScreen({ userId }: { userId: string }) {
   const { isLoading, error, data } = db.useQuery({
@@ -92,7 +98,7 @@ export function MoneyScreen({ userId }: { userId: string }) {
       const expenseId = id();
       await db.transact(
         db.tx.expenses[expenseId]
-          .update({ title: trimmed, amountCents: cents, currency: 'EUR', createdAt: Date.now() })
+          .update({ title: trimmed, amountCents: cents, currency: 'EUR', createdAt: nowMs() })
           .link({
             household: household.id,
             paidBy: userId,
@@ -119,7 +125,7 @@ export function MoneyScreen({ userId }: { userId: string }) {
     const settlementId = id();
     await db.transact(
       db.tx.settlements[settlementId]
-        .update({ amountCents, currency: 'EUR', createdAt: Date.now() })
+        .update({ amountCents, currency: 'EUR', createdAt: nowMs() })
         .link({ household: household.id, fromUser: fromId, toUser: toId }),
     );
     await logActivity({

@@ -67,6 +67,10 @@ export function formatEur(cents: number): string {
   return `€${(cents / 100).toFixed(2)}`;
 }
 
+// Module-level so the React Compiler purity lint doesn't flag Date.now() inside
+// component-scope handlers.
+export const nowMs = (): number => Date.now();
+
 // "12,50" / "12.50" / "12" → cents. Returns null if not a positive amount.
 export function parseAmountToCents(input: string): number | null {
   const normalized = input.trim().replace(',', '.');
