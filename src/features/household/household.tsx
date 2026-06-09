@@ -2,6 +2,7 @@
 // code. Otherwise show the home (with its invite code to share). The invite code
 // is just the household id for now; a prettier short code can come later.
 
+import * as Clipboard from 'expo-clipboard';
 import { id } from '@instantdb/react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -160,6 +161,14 @@ function JoinHousehold({ userId }: { userId: string }) {
 }
 
 function HouseholdHome({ name, role, code }: { name: string; role: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const onCopy = async () => {
+    await Clipboard.setStringAsync(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
     <View style={styles.block}>
       <Text style={styles.eyebrow}>Your home</Text>
@@ -171,6 +180,9 @@ function HouseholdHome({ name, role, code }: { name: string; role: string; code:
         <Text style={styles.inviteCode} selectable>
           {code}
         </Text>
+        <Pressable style={styles.copyButton} onPress={onCopy}>
+          <Text style={styles.copyLabel}>{copied ? 'Copied ✓' : 'Copy code'}</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -234,5 +246,14 @@ const styles = StyleSheet.create({
   },
   inviteLabel: { fontSize: 12, color: '#9b9b9b' },
   inviteCode: { fontSize: 13, color: '#111', fontWeight: '600' },
+  copyButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: '#111',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  copyLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
   error: { color: '#c0392b', fontSize: 14 },
 });
