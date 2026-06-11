@@ -20,7 +20,11 @@ export type ActivityType =
   | 'pantry_out'
   | 'pantry_claimed'
   | 'pantry_got'
-  | 'pantry_removed';
+  | 'pantry_removed'
+  | 'chore_added'
+  | 'chore_done'
+  | 'chore_passed'
+  | 'chore_removed';
 
 function eur(metadata: unknown): string {
   const cents =
@@ -104,6 +108,22 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
     case 'pantry_removed': {
       const item = metaString(metadata, 'item');
       return { icon: '🗑️', text: `${who} removed ${item ?? 'something'}` };
+    }
+    case 'chore_added': {
+      const chore = metaString(metadata, 'chore');
+      return { icon: '🧹', text: `${who} added a chore: ${chore ?? 'something'}` };
+    }
+    case 'chore_done': {
+      const chore = metaString(metadata, 'chore');
+      return { icon: '✨', text: `${who} did ${chore ?? 'a chore'}` };
+    }
+    case 'chore_passed': {
+      const chore = metaString(metadata, 'chore');
+      return { icon: '↪️', text: `${chore ?? 'a chore'} moved on from ${who}` };
+    }
+    case 'chore_removed': {
+      const chore = metaString(metadata, 'chore');
+      return { icon: '🗑️', text: `${who} removed ${chore ?? 'a chore'}` };
     }
     default:
       return { icon: '•', text: `${who} did something` };

@@ -78,12 +78,12 @@ raf ömrü arkaplanda) · "Got it" → opsiyonel "Add to Money? €__" köprüs�
 sessiz işaret VAR (puan/sayaç yok) · her "aldım" tarihiyle purchase-log'a yazılır (ileride
 cadence/"bitmek üzere" tahmini bedavaya çalışsın diye — görünmez temel).
 
-- ⬜ **Kiler listesi** — ekle / çıkar / "bitti" işaretle; "süt" ve "milk" tek kayda düşer. Test: süt ekle → herkeste görünüyor
-- ⬜ **"Bitti" → alışveriş listesine düşer** — Test: sütü "bitti" yap → alışveriş listesinde
-- ⬜ **"Ben alırım" üstlenme** — Test: bir kalemi üstlen → diğer telefonda "X alacak" görünüyor (çift alım önlenir)
-- ⬜ **"Got it ✓" + Money köprüsü** — Test: aldım de → €5 gir → Money'de "Milk €5" harcaması, kiler "var"a döner
-- ⬜ **Bozulma işareti** — Test: raf ömrü geçmiş üründe soluk işaret görünüyor (utandırma yok)
-- ⬜ **Günlüğe düşüyor** — Test: "kahve bitti" → günlükte
+- ✅ **Kiler listesi** — E2E 11 Haz: "süt" → "milk" olarak kaydedildi (alias), tekrar "milk" eklemek kopya yaratmadı, B anında gördü
+- ✅ **"Bitti" → alışveriş listesine düşer** — E2E 11 Haz
+- ✅ **"Ben alırım" üstlenme** — E2E 11 Haz: A üstlendi, B "kva… is getting it" gördü
+- ✅ **"Got it ✓" + Money köprüsü** — E2E 11 Haz: €4,50 girildi → Money'de "milk €4.50" + borç €2.25 doğru; kiler "var"a döndü
+- 🔶 **Bozulma işareti** — kod canlı; gerçek doğrulama zaman ister (süt 7 günde solacak — dogfood'da görülecek)
+- ✅ **Günlüğe düşüyor** — E2E 11 Haz: stocked/getting/got üçü de akışta
 
 **Faz 3 BİTTİ =** hepsi ✅ + ev bir alışverişi app üzerinden döndürdü.
 
@@ -92,10 +92,15 @@ cadence/"bitmek üzere" tahmini bedavaya çalışsın diye — görünmez temel)
 ## Faz 4 — 🧹 Tasks odası (elle)
 
 **Amaç:** Adil sıra. Utandırma yok (puan/streak/leaderboard YASAK).
+**Tasarım kararları (Serra, 11 Haz):** olay bazlı dönüş ("bitti" → sıra sonrakine; hafta/takvim
+yok) · cezasız Pass VAR (sıra devredilir, not düşülmez) · herkes Done diyebilir (emek yapanın
+adına yazılır, sıra yine ilerler) · "kim yaptı" = SADECE kronolojik geçmiş listesi (sayı bile yok).
 
 - ⬜ **İş tanımlama** — ev kendi işlerini ekler (çöp, banyo...). Test: iş ekle → herkeste görünüyor
 - ⬜ **Sıra motoru** — Test: işi "bitti" yap → sıra otomatik sonraki kişiye geçiyor
-- ⬜ **"Kim yaptı" defteri** — Test: geçmişte kim ne yaptı listeleniyor (sayı var, puan/sıralama yok)
+- ⬜ **Pass** — Test: sıra sendeyken Pass → sıra sonrakine, günlükte not yok/yumuşak
+- ⬜ **Sıra dışı Done** — Test: sıra başkasındayken sen Done de → geçmişe senin adın, sıra ilerliyor
+- ⬜ **Geçmiş listesi** — Test: işe dokun → "X did it, 2d ago" akışı (sayı/puan/sıralama YOK)
 - ⬜ **Günlüğe düşüyor** — Test: "Mert çöpü attı" günlükte
 
 **Faz 4 BİTTİ =** hepsi ✅ + 1 hafta gerçek çöp/banyo sırası app'ten döndü.
@@ -157,3 +162,4 @@ Yarı yolda aklına gelen her fikir önce buraya. Faz bitmeden yukarı taşınma
 - Harcama düzenleme (silmek yerine düzeltme)
 - Abonelik / düzenli ödeme takibi · kira/fatura (park)
 - App Store / Play yayını
+- Roomie → Ollie köprüsü (tek yönlü: ev olayları Ollie'nin E-kaynaklarına beslenir; aynı Clerk kimliği + home diary olay kaynağı hazır)

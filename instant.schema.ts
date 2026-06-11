@@ -77,6 +77,21 @@ const _schema = i.schema({
       itemName: i.string().indexed(), // normalized name
       at: i.date().indexed(),
     }),
+
+    // Tasks — a chore the home defined. The current turn holder lives in the
+    // `turn` link; rotation order is membership join order.
+    chores: i.entity({
+      name: i.string(),
+      createdAt: i.date().indexed(),
+      updatedAt: i.date().indexed(),
+    }),
+
+    // Tasks — append-only effort diary: who actually did (or passed) what.
+    // History only, never counts — the no-shame rule.
+    choreEvents: i.entity({
+      type: i.string(), // 'done' | 'pass'
+      at: i.date().indexed(),
+    }),
   },
 
   links: {
@@ -147,6 +162,24 @@ const _schema = i.schema({
     purchaseBy: {
       forward: { on: 'purchases', has: 'one', label: 'by' },
       reverse: { on: '$users', has: 'many', label: 'purchases' },
+    },
+
+    // Tasks links.
+    choreHousehold: {
+      forward: { on: 'chores', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'chores' },
+    },
+    choreTurn: {
+      forward: { on: 'chores', has: 'one', label: 'turn' },
+      reverse: { on: '$users', has: 'many', label: 'choreTurns' },
+    },
+    choreEventChore: {
+      forward: { on: 'choreEvents', has: 'one', label: 'chore' },
+      reverse: { on: 'chores', has: 'many', label: 'events' },
+    },
+    choreEventBy: {
+      forward: { on: 'choreEvents', has: 'one', label: 'by' },
+      reverse: { on: '$users', has: 'many', label: 'choreEvents' },
     },
   },
 });
