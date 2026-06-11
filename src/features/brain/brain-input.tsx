@@ -34,6 +34,7 @@ export function BrainInput({
   const [question, setQuestion] = useState<string | null>(null);
   const [ack, setAck] = useState<string[]>([]);
   const [amountDraft, setAmountDraft] = useState<Record<number, string>>({});
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   const reset = () => {
     setPhase('idle');
@@ -63,7 +64,8 @@ export function BrainInput({
         setAck(['Nothing to file — noted. 🌿']);
         setText('');
       }
-    } catch {
+    } catch (e) {
+      setErrorDetail((e as Error)?.message ?? String(e));
       setPhase('error');
     }
   };
@@ -162,7 +164,10 @@ export function BrainInput({
       ) : null}
 
       {phase === 'error' ? (
-        <Text style={styles.error}>Brain couldn&apos;t read that — nothing was saved.</Text>
+        <Text style={styles.error}>
+          Brain couldn&apos;t read that — nothing was saved.
+          {errorDetail ? `\n(${errorDetail})` : ''}
+        </Text>
       ) : null}
     </View>
   );
