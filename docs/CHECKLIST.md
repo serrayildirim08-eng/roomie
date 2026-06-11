@@ -103,6 +103,13 @@ adına yazılır, sıra yine ilerler) · "kim yaptı" = SADECE kronolojik geçmi
 - ✅ **Geçmiş listesi** — E2E 11 Haz: kronolojik, sayısız ("tvb passed · You did it")
 - ✅ **Günlüğe düşüyor** — E2E 11 Haz: added/did/passed üçü de akışta (not: 2 Done'dan 1'i sayıldı test anında — büyük olasılık senkron gecikmesi, dogfood'da izlenecek)
 
+**Faz 4 revizyonu (Serra dogfood feedback'i, 11 Haz akşam):**
+- ✅ **Mine = aksiyon listesi** — sıran gelen ev işleri + kişisel işler tek yerde; House = kalanlar (E2E ✓)
+- ✅ **Yeni iş ekleyende başlar** — member[0] yığılması bitti (E2E ✓)
+- ✅ **Turn pill** — alt yazı yerine sağda tek pill (terracotta "Your turn" / soluk isim)
+- ✅ **Kişisel görevler (personalTasks)** — sadece sahibi görür (E2E: B göremedi ✓), Done → kaybolur, günlüğe yazılmaz; "need a favor" için household'a bağlı
+- ✅ **Hazır yüklü işler** — yeni ev: Trash/Dishes/Bathroom/Floors otomatik (E2E ✓); eski ev: "+ Add the classics" tek-dokunuş linki (hepsi varken gizleniyor — E2E ✓)
+
 **Faz 4 fiilen BİTTİ** (1 hafta gerçek çöp/banyo dogfood'u kalan tek madde).
 
 **Faz 4 BİTTİ =** hepsi ✅ + 1 hafta gerçek çöp/banyo sırası app'ten döndü.
