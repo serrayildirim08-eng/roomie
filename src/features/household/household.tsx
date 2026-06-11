@@ -12,11 +12,9 @@ import { db } from '@/lib/db';
 import { logActivity } from '@/features/activity/activity';
 import { ActivityFeed } from '@/features/activity/activity-feed';
 
-const INVITE_CODE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { STARTER_CHORES } from '@/features/tasks/starter';
 
-// New homes start with the classics — removable like any other chore.
-// First turn: the creator (they're the only member at that moment anyway).
-const STARTER_CHORES = ['Trash', 'Dishes', 'Bathroom', 'Floors'];
+const INVITE_CODE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function HouseholdGate({ userId, userName }: { userId: string; userName: string }) {
   const { isLoading, error, data } = db.useQuery({

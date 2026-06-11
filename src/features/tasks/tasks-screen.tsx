@@ -32,6 +32,7 @@ import { nowMs } from '@/features/money/money-logic';
 import { db } from '@/lib/db';
 
 import { effectiveTurn, nextTurn } from './rotation';
+import { STARTER_CHORES } from './starter';
 
 // "vfya+clerk_test@example.com" → "vfya"
 function emailName(email?: string): string | undefined {
@@ -100,6 +101,22 @@ export function TasksScreen({ userId }: { userId: string }) {
   const myTasks = household.personalTasks
     .filter((t) => t.owner?.id === userId)
     .sort((a, b) => Number(a.createdAt) - Number(b.createdAt));
+
+  // Classics missing (home predates seeding, or they were deleted)? Offer
+  // a one-tap re-seed. Hidden once all four exist.
+  const choreNamesLower = new Set(chores.map((c) => c.name.toLowerCase()));
+  const missingStarters = STARTER_CHORES.filter((s) => !choreNamesLower.has(s.toLowerCase()));
+
+  const onSeedStarters = async () => {
+    const ts = nowMs();
+    await db.transact(
+      missingStarters.map((name, idx) =>
+        db.tx.chores[id()]
+          .update({ name, createdAt: ts + idx, updatedAt: ts + idx })
+          .link({ household: household.id, turn: userId }),
+      ),
+    );
+  };
 
   const onAddHouse = async () => {
     const name = houseDraft.trim().replace(/\s+/g, ' ');
@@ -310,6 +327,14 @@ export function TasksScreen({ userId }: { userId: string }) {
         ) : (
           otherChores.map(renderChore)
         )}
+
+        {missingStarters.length > 0 ? (
+          <Pressable style={styles.seedLink} onPress={onSeedStarters}>
+            <Text style={styles.seedLinkLabel}>
+              + Add the classics: {missingStarters.join(' · ')}
+            </Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -413,4 +438,6 @@ const styles = StyleSheet.create({
   historyTime: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.sub },
   mineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
   mineTitle: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  seedLink: { paddingVertical: 8 },
+  seedLinkLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
 });
