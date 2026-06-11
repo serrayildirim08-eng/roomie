@@ -2,7 +2,7 @@
 // into the household flow (create one, or see the one they're in).
 
 import { useAuth, useUser } from '@clerk/expo';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Roomie, RoomieFonts } from '@/constants/theme';
@@ -16,7 +16,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.hello}>Hi {user?.username ?? 'there'} 👋</Text>
 
         {instantLoading ? (
@@ -30,14 +30,14 @@ export default function HomeScreen() {
         <Pressable style={styles.signout} onPress={() => signOut()}>
           <Text style={styles.signoutLabel}>Sign out</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Roomie.canvas },
-  container: { flex: 1, justifyContent: 'center', paddingHorizontal: 28, gap: 10 },
+  container: { paddingHorizontal: 28, paddingTop: 24, paddingBottom: 48, gap: 10 },
   hello: { fontSize: 30, fontFamily: RoomieFonts.display, color: Roomie.ink },
   note: { fontSize: 14, fontFamily: RoomieFonts.body, color: Roomie.sub, marginTop: 4 },
   signout: { marginTop: 28, alignSelf: 'flex-start' },

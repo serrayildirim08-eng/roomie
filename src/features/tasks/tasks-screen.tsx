@@ -32,7 +32,7 @@ import { nowMs } from '@/features/money/money-logic';
 import { db } from '@/lib/db';
 
 import { effectiveTurn, nextTurn } from './rotation';
-import { STARTER_CHORES } from './starter';
+import { CHORE_LIBRARY } from './starter';
 
 // "vfya+clerk_test@example.com" → "vfya"
 function emailName(email?: string): string | undefined {
@@ -58,6 +58,7 @@ export function TasksScreen({ userId }: { userId: string }) {
   const [houseDraft, setHouseDraft] = useState('');
   const [mineDraft, setMineDraft] = useState('');
   const [openChoreId, setOpenChoreId] = useState<string | null>(null);
+  const [showLibrary, setShowLibrary] = useState(false);
 
   if (isLoading) {
     return (
@@ -102,20 +103,28 @@ export function TasksScreen({ userId }: { userId: string }) {
     .filter((t) => t.owner?.id === userId)
     .sort((a, b) => Number(a.createdAt) - Number(b.createdAt));
 
-  // Classics missing (home predates seeding, or they were deleted)? Offer
-  // a one-tap re-seed. Hidden once all four exist.
+  // Suggestion library ("pizza menu"): rows the home doesn't have yet,
+  // grouped, one tap to add. Already-added chores drop out automatically.
   const choreNamesLower = new Set(chores.map((c) => c.name.toLowerCase()));
-  const missingStarters = STARTER_CHORES.filter((s) => !choreNamesLower.has(s.toLowerCase()));
+  const librarySections = CHORE_LIBRARY.map((g) => ({
+    group: g.group,
+    chores: g.chores.filter((s) => !choreNamesLower.has(s.name.toLowerCase())),
+  })).filter((g) => g.chores.length > 0);
 
-  const onSeedStarters = async () => {
+  const onAddSuggestion = async (name: string) => {
     const ts = nowMs();
     await db.transact(
-      missingStarters.map((name, idx) =>
-        db.tx.chores[id()]
-          .update({ name, createdAt: ts + idx, updatedAt: ts + idx })
-          .link({ household: household.id, turn: userId }),
-      ),
+      db.tx.chores[id()]
+        .update({ name, createdAt: ts, updatedAt: ts })
+        .link({ household: household.id, turn: userId }),
     );
+    await logActivity({
+      householdId: household.id,
+      actorId: userId,
+      actorName: myName,
+      type: 'chore_added',
+      metadata: { chore: name },
+    });
   };
 
   const onAddHouse = async () => {
@@ -328,13 +337,30 @@ export function TasksScreen({ userId }: { userId: string }) {
           otherChores.map(renderChore)
         )}
 
-        {missingStarters.length > 0 ? (
-          <Pressable style={styles.seedLink} onPress={onSeedStarters}>
+        {librarySections.length > 0 ? (
+          <Pressable style={styles.seedLink} onPress={() => setShowLibrary(!showLibrary)}>
             <Text style={styles.seedLinkLabel}>
-              + Add the classics: {missingStarters.join(' · ')}
+              {showLibrary ? '− Hide suggestions' : '+ Add from suggestions'}
             </Text>
           </Pressable>
         ) : null}
+        {showLibrary
+          ? librarySections.map((g) => (
+              <View key={g.group} style={styles.libGroup}>
+                <Text style={styles.libGroupTitle}>{g.group}</Text>
+                {g.chores.map((s) => (
+                  <Pressable
+                    key={s.name}
+                    style={styles.libRow}
+                    onPress={() => onAddSuggestion(s.name)}
+                  >
+                    <Text style={styles.libName}>+ {s.name}</Text>
+                    <Text style={styles.libHint}>{s.hint}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ))
+          : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -440,4 +466,22 @@ const styles = StyleSheet.create({
   mineTitle: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   seedLink: { paddingVertical: 8 },
   seedLinkLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
+  libGroup: { gap: 2, marginBottom: 6 },
+  libGroupTitle: {
+    fontSize: 11,
+    fontFamily: RoomieFonts.bodyBold,
+    color: Roomie.sub,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  libRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 4,
+  },
+  libName: { fontSize: 14, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  libHint: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.sub },
 });
