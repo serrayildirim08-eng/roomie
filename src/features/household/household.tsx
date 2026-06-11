@@ -4,7 +4,7 @@
 
 import * as Clipboard from 'expo-clipboard';
 import { id } from '@instantdb/react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Roomie, RoomieFonts } from '@/constants/theme';
@@ -21,6 +21,16 @@ export function HouseholdGate({ userId, userName }: { userId: string; userName: 
       household: {},
     },
   });
+
+  // Self-heal: older memberships were saved without a displayName (they render
+  // as "Someone" everywhere). Whenever the signed-in user opens the app with a
+  // real username, stamp it onto their own membership row.
+  const myMembership = data?.memberships[0];
+  useEffect(() => {
+    if (!myMembership || !userName || userName === 'Someone') return;
+    if (myMembership.displayName === userName) return;
+    void db.transact(db.tx.memberships[myMembership.id].update({ displayName: userName }));
+  }, [myMembership, userName]);
 
   if (isLoading) {
     return (

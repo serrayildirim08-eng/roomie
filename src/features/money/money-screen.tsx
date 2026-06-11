@@ -29,6 +29,12 @@ import {
   simplifyDebts,
 } from './money-logic';
 
+// "vfya+clerk_test@example.com" → "vfya"
+function emailName(email?: string): string | undefined {
+  const local = email?.split('@')[0]?.replace(/\+.*$/, '');
+  return local || undefined;
+}
+
 export function MoneyScreen({ userId }: { userId: string }) {
   const { isLoading, error, data } = db.useQuery({
     memberships: {
@@ -74,7 +80,12 @@ export function MoneyScreen({ userId }: { userId: string }) {
   }
 
   const members = household.memberships
-    .map((m) => ({ userId: m.user?.id ?? '', name: m.displayName ?? 'Someone' }))
+    .map((m) => ({
+      userId: m.user?.id ?? '',
+      // displayName is stamped at join (and self-healed on app open); fall back
+      // to the email's local part for old rows so nobody renders as "Someone".
+      name: m.displayName ?? emailName(m.user?.email) ?? 'Someone',
+    }))
     .filter((m) => m.userId);
   const nameById = Object.fromEntries(members.map((m) => [m.userId, m.name]));
   const myName = nameById[userId] ?? 'You';
