@@ -48,7 +48,7 @@ Kafan karışınca SADECE buraya bak. Detaylı "ne/neden" için: [`ROADMAP_ELI5.
 - ⬜ **Ödeyeni seçme** — varsayılan "ben", ama Mert ödediyse Mert seçilebilir. Test: "Mert ödedi" gir → borçlar Mert'e doğru çıkıyor
 - ⬜ **Paylaşanları seçme** — varsayılan "tüm ev", ama "sadece ikimiz" seçilebilir. Test: 2 kişilik harcama → 3. kişi borçlanmıyor
 - ✅ **Harcama geçmişi + silme** — Serra 2 simde doğruladı 11 Haz (sil → borçlar geri düzeldi)
-- ⬜ **Money matematiğine test** — `money-logic.ts` pure; vitest kur, `computeNetCents` + `simplifyDebts` + `parseAmountToCents` için ~10 test. Test: `npm test` yeşil
+- ✅ **Money matematiğine test** — vitest kuruldu, 19 test yeşil (`npm test`), €700/3 dogfood vakası dahil (11 Haz)
 - 🔶 **Günlüğe düşüyor** — Test: harcama ekleyince ev günlüğünde "X harcama ekledi" çıkıyor
 
 **Faz 2 BİTTİ =** hepsi ✅ + 2 telefonla gerçek bir market harcaması baştan sona işlendi.

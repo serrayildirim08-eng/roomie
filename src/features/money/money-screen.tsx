@@ -102,7 +102,9 @@ export function MoneyScreen({ userId }: { userId: string }) {
   }));
 
   const net = computeNetCents(members, expenses, settlements);
-  const debts = simplifyDebts(net);
+  // Privacy: you only see debts you're part of — never what two housemates
+  // owe each other.
+  const debts = simplifyDebts(net).filter((d) => d.fromId === userId || d.toId === userId);
 
   // Effective form choices (fall back to defaults until the user picks).
   const payerId = paidById ?? userId;
@@ -267,18 +269,15 @@ export function MoneyScreen({ userId }: { userId: string }) {
           </Pressable>
         </View>
 
-        <Text style={styles.section}>Who owes whom</Text>
+        <Text style={styles.section}>Your balance</Text>
         {debts.length === 0 ? (
-          <Text style={styles.muted}>All settled up. 🎉</Text>
+          <Text style={styles.muted}>You&apos;re all square. 🤍</Text>
         ) : (
           debts.map((d, idx) => {
             const youPay = d.fromId === userId;
-            const youGet = d.toId === userId;
             const label = youPay
               ? `You owe ${nameById[d.toId]}`
-              : youGet
-                ? `${nameById[d.fromId]} owes you`
-                : `${nameById[d.fromId]} owes ${nameById[d.toId]}`;
+              : `${nameById[d.fromId]} owes you`;
             return (
               <View key={idx} style={styles.debtRow}>
                 <Text style={styles.debtText}>{label}</Text>
