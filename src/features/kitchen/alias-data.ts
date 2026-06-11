@@ -40,6 +40,81 @@ export const CATEGORY_EMOJI: Record<GroceryCategory, string> = {
   other: '🧺',
 };
 
+// Item-level emoji for the staples people actually type; the category emoji
+// is only the fallback (so lemon is 🍋, not the leafy-greens 🥬).
+const ITEM_EMOJI: Record<string, string> = {
+  milk: '🥛',
+  egg: '🥚',
+  cheese: '🧀',
+  feta: '🧀',
+  mozzarella: '🧀',
+  parmesan: '🧀',
+  butter: '🧈',
+  bread: '🍞',
+  tomato: '🍅',
+  onion: '🧅',
+  garlic: '🧄',
+  potato: '🥔',
+  'sweet potato': '🍠',
+  carrot: '🥕',
+  cucumber: '🥒',
+  eggplant: '🍆',
+  'bell pepper': '🫑',
+  'hot pepper': '🌶️',
+  mushroom: '🍄',
+  broccoli: '🥦',
+  corn: '🌽',
+  banana: '🍌',
+  apple: '🍎',
+  orange: '🍊',
+  lemon: '🍋',
+  lime: '🍋',
+  avocado: '🥑',
+  strawberry: '🍓',
+  blueberry: '🫐',
+  grape: '🍇',
+  water: '💧',
+  juice: '🧃',
+  coffee: '☕',
+  tea: '🍵',
+  beer: '🍺',
+  wine: '🍷',
+  soda: '🥤',
+  rice: '🍚',
+  pasta: '🍝',
+  honey: '🍯',
+  'peanut butter': '🥜',
+  nuts: '🥜',
+  chicken: '🍗',
+  fish: '🐟',
+  shrimp: '🦐',
+  bacon: '🥓',
+  'olive oil': '🫒',
+  olives: '🫒',
+  salt: '🧂',
+  'ice cream': '🍦',
+  'frozen pizza': '🍕',
+  chocolate: '🍫',
+  cookies: '🍪',
+  candy: '🍬',
+  popcorn: '🍿',
+  'toilet paper': '🧻',
+  'paper towel': '🧻',
+  shampoo: '🧴',
+  toothpaste: '🪥',
+  lentil: '🫘',
+  chickpea: '🫘',
+  'black bean': '🫘',
+  'white bean': '🫘',
+};
+
+// The one emoji a pantry row shows: item override → category → basket.
+export function itemEmoji(name: string, category: GroceryCategory | string): string {
+  return (
+    ITEM_EMOJI[name] ?? CATEGORY_EMOJI[(category as GroceryCategory) ?? 'other'] ?? '🧺'
+  );
+}
+
 function buildAliasTable(): AliasTable {
   const T: AliasTable = {};
   const add = (

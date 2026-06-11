@@ -28,8 +28,7 @@ import { nowMs, parseAmountToCents } from '@/features/money/money-logic';
 import { db } from '@/lib/db';
 
 import { ageOf } from './aging';
-import { CATEGORY_EMOJI } from './alias-data';
-import type { GroceryCategory } from './alias-data';
+import { itemEmoji } from './alias-data';
 import { resolveItem } from './normalize';
 
 // "vfya+clerk_test@example.com" → "vfya"
@@ -287,9 +286,7 @@ export function KitchenScreen({ userId }: { userId: string }) {
             const mine = claimerId === userId;
             return (
               <View key={it.id} style={styles.row}>
-                <Text style={styles.rowEmoji}>
-                  {CATEGORY_EMOJI[(it.category as GroceryCategory) ?? 'other'] ?? '🧺'}
-                </Text>
+                <Text style={styles.rowEmoji}>{itemEmoji(it.name, it.category)}</Text>
                 <Text style={styles.rowName}>{it.name}</Text>
                 {claimerId && !mine ? (
                   <Text style={styles.claimedNote}>{nameById[claimerId]} is getting it</Text>
@@ -324,9 +321,7 @@ export function KitchenScreen({ userId }: { userId: string }) {
             const aging = age !== 'fresh';
             return (
               <View key={it.id} style={styles.row}>
-                <Text style={styles.rowEmoji}>
-                  {CATEGORY_EMOJI[(it.category as GroceryCategory) ?? 'other'] ?? '🧺'}
-                </Text>
+                <Text style={styles.rowEmoji}>{itemEmoji(it.name, it.category)}</Text>
                 <Text style={[styles.rowName, aging && styles.rowNameAging]}>{it.name}</Text>
                 {aging ? <View style={styles.agingDot} /> : null}
                 <Pressable style={styles.outButton} onPress={() => onOut(it.id, it.name)}>
