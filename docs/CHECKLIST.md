@@ -122,13 +122,17 @@ adına yazılır, sıra yine ilerler) · "kim yaptı" = SADECE kronolojik geçmi
 ## Faz 5 — 🧠 Beyin (yazı)
 
 **Amaç:** "süt aldım 5€" → tek cümle, doğru odalara taslak.
+**Tasarım kararları (Serra, 11 Haz):** kutu Home'un tepesinde · 4 hedef birden (Money/Kitchen/
+Tasks/Mine) · ayrı Roomie worker'ı (roomie-brain.ollieapp.workers.dev) · eski Groq anahtarı
+kullanılıyor, beta kapısında rotasyon.
 
-- ⬜ **LLM routing** (Ollie L1'den uyarla) — cümle → hangi oda(lar) + alanlar
-- ⬜ **Taslak + onay** — AI asla sessiz kaydetmez. Test: "süt aldım 5€" yaz → onay kartı çıkıyor → onayla → Kitchen'a süt + Money'ye €5 düşüyor
-- ⬜ **Belirsizse soruyor** — Test: "bi şeyler aldım" → app tahmin uydurmuyor, soruyor
-- ⬜ **Maliyet kapısı** — günlük/aylık AI tavanı var
+- ✅ **LLM routing** — Groq JSON modu + CF Workers AI yedeği + zod kurtarıcı parser (E2E 7/7: TR/EN karışık, çoklu parça)
+- ✅ **Taslak + onay** — E2E: "süt aldım 5€" → kart → Confirm → Kitchen'a milk + Money'ye €5.00 düştü; Confirm'süz hiçbir yazma yok
+- ✅ **Belirsizse soruyor** — E2E: "bugün market ödedim" → "🧠 Kaç € tuttu?" — tahmin uydurmuyor
+- ✅ **Maliyet kapısı** — günlük çağrı tavanı (200) + token sınırı; Voyage önbellek bilerek ertelendi
+- 🔶 **Sim/telefonda gerçek dogfood** — web E2E 8/8; Serra'nın elinde denenecek
 
-**Faz 5 BİTTİ =** hepsi ✅ + 3 farklı gerçek cümle doğru işlendi.
+**Faz 5 BİTTİ =** hepsi ✅ + 3 farklı gerçek cümle doğru işlendi (E2E'de 7 cümle ✓; dogfood onayı kaldı).
 
 ---
 
