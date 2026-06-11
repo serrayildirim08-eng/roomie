@@ -12,6 +12,7 @@ import { db } from '@/lib/db';
 export type ActivityType =
   | 'household_created'
   | 'member_joined'
+  | 'member_left'
   | 'expense_added'
   | 'expense_deleted'
   | 'debt_settled';
@@ -62,6 +63,8 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
       return { icon: '🏠', text: `${who} created the home` };
     case 'member_joined':
       return { icon: '👋', text: `${who} joined` };
+    case 'member_left':
+      return { icon: '🕊️', text: `${who} moved out` };
     case 'expense_added': {
       const title = metaString(metadata, 'title');
       return {

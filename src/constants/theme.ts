@@ -7,13 +7,39 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+// Roomie's voice: a sunlit kitchen corkboard, not a fintech dashboard.
+// Warm linen canvas, espresso ink, terracotta accent, oat cards. One serif
+// (Fraunces) for "home" moments, a rounded body face (Nunito) for everything
+// else. Few words, soft shapes, zero shame.
+export const Roomie = {
+  canvas: '#FBF7F0', // warm linen — every screen's background
+  card: '#F4EDE1', // oat — cards and soft surfaces
+  ink: '#2D261F', // espresso — primary text
+  sub: '#97897A', // warm gray — secondary text, labels
+  hairline: '#EADFCE', // soft borders
+  accent: '#C56C45', // terracotta — primary buttons, selected chips
+  onAccent: '#FFF9F2', // text on terracotta
+  sage: '#6F7F5E', // settled / gentle positive
+  sageSoft: '#E9EDE2', // sage wash for "all settled" moments
+  danger: '#B5543B', // warm clay red — errors, sign out
+  input: '#FFFDF9', // input fill, a touch lighter than canvas
+} as const;
+
+export const RoomieFonts = {
+  display: 'Fraunces_600SemiBold',
+  displayBold: 'Fraunces_700Bold',
+  body: 'Nunito_400Regular',
+  bodySemi: 'Nunito_600SemiBold',
+  bodyBold: 'Nunito_700Bold',
+} as const;
+
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: Roomie.ink,
+    background: Roomie.canvas,
+    backgroundElement: Roomie.card,
+    backgroundSelected: Roomie.hairline,
+    textSecondary: Roomie.sub,
   },
   dark: {
     text: '#ffffff',

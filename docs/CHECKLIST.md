@@ -40,10 +40,11 @@ Kafan karışınca SADECE buraya bak. Detaylı "ne/neden" için: [`ROADMAP_ELI5.
 
 **Amaç:** Harcama gir, borcu gör, "ödedim" de.
 
-- 🔶 **Harcama ekleme** (ne / kaç € / kim ödedi / kimler paylaşıyor) — Test: telefondan harcama ekle, listede görünüyor
-- 🔶 **Borç hesabı doğru** — Test: €30'luk harcama, 3 kişi → herkes ödeyene €10; kuruşlu tutarda (€10,01) toplam şaşmıyor
-- 🔶 **Senkron** — Test: A telefonda harcama ekle → B telefonda anında görünüyor
+- ✅ **Harcama ekleme** — E2E doğrulandı 11 Haz (2 gerçek hesap, web test tezgahı)
+- 🔶 **Borç hesabı doğru** — €30/2 kişi = €15 ✅ doğrulandı; kuruş testi (€10,01) henüz doğrulanmadı
+- ✅ **Senkron** — B, A'nın harcamasını + borcu anında gördü (E2E 11 Haz)
 - 🔶 **"Ödedim" (settle)** — Test: borcu öde olarak işaretle → "kim kime" listesinden düşüyor
+- ✅ **🐛 Ev-arkadaşı-görünmezlik bug'ı** — E2E yakaladı, fix canlıda (instant.perms.ts: aynı evdekiler birbirini görür; commit 00ecb65). Bu fix'ten önce Money 2+ kişide tamamen bozuktu
 - ⬜ **Ödeyeni seçme** — varsayılan "ben", ama Mert ödediyse Mert seçilebilir. Test: "Mert ödedi" gir → borçlar Mert'e doğru çıkıyor
 - ⬜ **Paylaşanları seçme** — varsayılan "tüm ev", ama "sadece ikimiz" seçilebilir. Test: 2 kişilik harcama → 3. kişi borçlanmıyor
 - ⬜ **Harcama geçmişi + silme** — eklenenler listeleniyor, yanlış girilen silinebiliyor. Test: harcama ekle → sil → borçlar eski haline dönüyor
