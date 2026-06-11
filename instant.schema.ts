@@ -92,6 +92,14 @@ const _schema = i.schema({
       type: i.string(), // 'done' | 'pass'
       at: i.date().indexed(),
     }),
+
+    // Tasks — personal to-dos. One owner, no rotation. Scoped to the
+    // household so "need a favor" can read them later.
+    personalTasks: i.entity({
+      title: i.string(),
+      status: i.string(), // 'open' | 'done'
+      createdAt: i.date().indexed(),
+    }),
   },
 
   links: {
@@ -180,6 +188,14 @@ const _schema = i.schema({
     choreEventBy: {
       forward: { on: 'choreEvents', has: 'one', label: 'by' },
       reverse: { on: '$users', has: 'many', label: 'choreEvents' },
+    },
+    personalTaskHousehold: {
+      forward: { on: 'personalTasks', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'personalTasks' },
+    },
+    personalTaskOwner: {
+      forward: { on: 'personalTasks', has: 'one', label: 'owner' },
+      reverse: { on: '$users', has: 'many', label: 'personalTasks' },
     },
   },
 });

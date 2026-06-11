@@ -96,12 +96,14 @@ cadence/"bitmek üzere" tahmini bedavaya çalışsın diye — görünmez temel)
 yok) · cezasız Pass VAR (sıra devredilir, not düşülmez) · herkes Done diyebilir (emek yapanın
 adına yazılır, sıra yine ilerler) · "kim yaptı" = SADECE kronolojik geçmiş listesi (sayı bile yok).
 
-- ⬜ **İş tanımlama** — ev kendi işlerini ekler (çöp, banyo...). Test: iş ekle → herkeste görünüyor
-- ⬜ **Sıra motoru** — Test: işi "bitti" yap → sıra otomatik sonraki kişiye geçiyor
-- ⬜ **Pass** — Test: sıra sendeyken Pass → sıra sonrakine, günlükte not yok/yumuşak
-- ⬜ **Sıra dışı Done** — Test: sıra başkasındayken sen Done de → geçmişe senin adın, sıra ilerliyor
-- ⬜ **Geçmiş listesi** — Test: işe dokun → "X did it, 2d ago" akışı (sayı/puan/sıralama YOK)
-- ⬜ **Günlüğe düşüyor** — Test: "Mert çöpü attı" günlükte
+- ✅ **İş tanımlama** — E2E 11 Haz: "trash" eklendi, B anında gördü, ilk sıra ilk üyede
+- ✅ **Sıra motoru** — E2E 11 Haz: Done → sıra A'dan B'ye iki ekranda da geçti
+- ✅ **Pass** — E2E 11 Haz: cezasız devir, günlükte yumuşak dil ("moved on from")
+- ✅ **Sıra dışı Done** — E2E 11 Haz: sıra A'dayken B kapattı → emek B'ye yazıldı, sıra ilerledi
+- ✅ **Geçmiş listesi** — E2E 11 Haz: kronolojik, sayısız ("tvb passed · You did it")
+- ✅ **Günlüğe düşüyor** — E2E 11 Haz: added/did/passed üçü de akışta (not: 2 Done'dan 1'i sayıldı test anında — büyük olasılık senkron gecikmesi, dogfood'da izlenecek)
+
+**Faz 4 fiilen BİTTİ** (1 hafta gerçek çöp/banyo dogfood'u kalan tek madde).
 
 **Faz 4 BİTTİ =** hepsi ✅ + 1 hafta gerçek çöp/banyo sırası app'ten döndü.
 

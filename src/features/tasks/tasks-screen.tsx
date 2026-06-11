@@ -1,10 +1,16 @@
-// Tasks — fair chore rotation, v1: manual, event-driven.
+// Tasks — two quiet lists, split by WHO ACTS, not by what kind of task:
 //
-// The home defines its own chores. Each chore shows whose turn it is.
-// Done ✓ — anyone can tap it (credit goes to the doer), the turn advances.
-// Pass — only the turn holder, penalty-free, turn moves on.
-// Tapping a chore opens its quiet history: "X did it · 2d ago". A plain
-// chronological list — no counts, no points, no streaks, ever.
+// MINE — your action list: house chores whose turn is yours right now
+// (terracotta "Your turn" pill, Done/Pass) + your personal to-dos. One
+// glance answers "what's on my plate".
+//
+// HOUSE — the rest of the board: chores on someone else's turn (faded name
+// pill; Done ✓ still available — anyone can close, credit to the doer, the
+// turn advances). Pass is turn-holder-only and penalty-free. Tap a chore →
+// quiet chronological history. No counts, no points, no streaks, ever.
+//
+// New homes come preloaded with four classic chores (seeded at creation,
+// removable like any other). Whoever ADDS a chore takes its first turn.
 
 import { id } from '@instantdb/react-native';
 import { useState } from 'react';
@@ -43,11 +49,13 @@ export function TasksScreen({ userId }: { userId: string }) {
           turn: {},
           events: { $: { order: { at: 'desc' }, limit: 12 }, by: {} },
         },
+        personalTasks: { $: { where: { status: 'open' } }, owner: {} },
       },
     },
   });
 
-  const [draft, setDraft] = useState('');
+  const [houseDraft, setHouseDraft] = useState('');
+  const [mineDraft, setMineDraft] = useState('');
   const [openChoreId, setOpenChoreId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -87,17 +95,23 @@ export function TasksScreen({ userId }: { userId: string }) {
   const myName = nameById[userId] ?? 'You';
 
   const chores = [...household.chores].sort((a, b) => Number(a.createdAt) - Number(b.createdAt));
+  const myChores = chores.filter((c) => effectiveTurn(memberIds, c.turn?.id) === userId);
+  const otherChores = chores.filter((c) => effectiveTurn(memberIds, c.turn?.id) !== userId);
+  const myTasks = household.personalTasks
+    .filter((t) => t.owner?.id === userId)
+    .sort((a, b) => Number(a.createdAt) - Number(b.createdAt));
 
-  const onAdd = async () => {
-    const name = draft.trim().replace(/\s+/g, ' ');
+  const onAddHouse = async () => {
+    const name = houseDraft.trim().replace(/\s+/g, ' ');
     if (!name) return;
-    setDraft('');
+    setHouseDraft('');
     const ts = nowMs();
     const choreId = id();
     await db.transact(
       db.tx.chores[choreId]
         .update({ name, createdAt: ts, updatedAt: ts })
-        .link({ household: household.id, turn: memberIds[0] ?? userId }),
+        // The adder takes the first turn — you brought it up, you start.
+        .link({ household: household.id, turn: userId }),
     );
     await logActivity({
       householdId: household.id,
@@ -106,6 +120,27 @@ export function TasksScreen({ userId }: { userId: string }) {
       type: 'chore_added',
       metadata: { chore: name },
     });
+  };
+
+  const onAddMine = async () => {
+    const title = mineDraft.trim().replace(/\s+/g, ' ');
+    if (!title) return;
+    setMineDraft('');
+    const taskId = id();
+    await db.transact(
+      db.tx.personalTasks[taskId]
+        .update({ title, status: 'open', createdAt: nowMs() })
+        .link({ household: household.id, owner: userId }),
+    );
+    // Personal tasks stay out of the home diary — they're yours.
+  };
+
+  const onMineDone = async (taskId: string) => {
+    await db.transact(db.tx.personalTasks[taskId].update({ status: 'done' }));
+  };
+
+  const onMineDelete = async (taskId: string) => {
+    await db.transact(db.tx.personalTasks[taskId].delete());
   };
 
   const advance = async (
@@ -118,9 +153,7 @@ export function TasksScreen({ userId }: { userId: string }) {
     const next = nextTurn(memberIds, holderId);
     const eventId = id();
     await db.transact([
-      db.tx.chores[choreId]
-        .update({ updatedAt: ts })
-        .link({ turn: next ?? userId }),
+      db.tx.chores[choreId].update({ updatedAt: ts }).link({ turn: next ?? userId }),
       db.tx.choreEvents[eventId]
         .update({ type: eventType, at: ts })
         .link({ chore: choreId, by: userId }),
@@ -134,7 +167,7 @@ export function TasksScreen({ userId }: { userId: string }) {
     });
   };
 
-  const onDelete = (choreId: string, choreName: string) => {
+  const onDeleteChore = (choreId: string, choreName: string) => {
     Alert.alert('Remove this chore?', `"${choreName}" and its history will be removed.`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -156,91 +189,126 @@ export function TasksScreen({ userId }: { userId: string }) {
     ]);
   };
 
+  const renderChore = (chore: (typeof chores)[number]) => {
+    const holderId = effectiveTurn(memberIds, chore.turn?.id);
+    const mine = holderId === userId;
+    const open = openChoreId === chore.id;
+    const events = chore.events ?? [];
+    return (
+      <View key={chore.id} style={styles.choreCard}>
+        <Pressable style={styles.choreRow} onPress={() => setOpenChoreId(open ? null : chore.id)}>
+          <Text style={styles.choreName}>{chore.name}</Text>
+          <View style={[styles.turnPill, mine && styles.turnPillMine]}>
+            <Text style={[styles.turnPillLabel, mine && styles.turnPillLabelMine]}>
+              {mine ? 'Your turn' : (nameById[holderId ?? ''] ?? 'someone')}
+            </Text>
+          </View>
+          {mine ? (
+            <Pressable
+              style={styles.pass}
+              onPress={() => advance(chore.id, chore.name, holderId, 'pass')}
+            >
+              <Text style={styles.passLabel}>Pass</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            style={styles.done}
+            onPress={() => advance(chore.id, chore.name, holderId, 'done')}
+          >
+            <Text style={styles.doneLabel}>Done ✓</Text>
+          </Pressable>
+          <Pressable
+            style={styles.delete}
+            onPress={() => onDeleteChore(chore.id, chore.name)}
+            hitSlop={8}
+            accessibilityLabel={`Remove ${chore.name}`}
+          >
+            <Text style={styles.deleteLabel}>✕</Text>
+          </Pressable>
+        </Pressable>
+
+        {open ? (
+          <View style={styles.history}>
+            {events.length === 0 ? (
+              <Text style={styles.historyEmpty}>No history yet.</Text>
+            ) : (
+              events.map((ev) => (
+                <View key={ev.id} style={styles.historyRow}>
+                  <Text style={styles.historyText}>
+                    {ev.by?.id === userId ? 'You' : (nameById[ev.by?.id ?? ''] ?? 'Someone')}{' '}
+                    {ev.type === 'done' ? 'did it' : 'passed'}
+                  </Text>
+                  <Text style={styles.historyTime}>{timeAgo(Number(ev.at))}</Text>
+                </View>
+              ))
+            )}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.heading}>Tasks</Text>
 
+        <Text style={styles.section}>Mine</Text>
+        {myChores.map(renderChore)}
         <View style={styles.addRow}>
           <TextInput
             style={styles.input}
-            placeholder="Add a chore… (trash, bathroom)"
+            placeholder="Add a task for yourself…"
             placeholderTextColor={Roomie.sub}
-            value={draft}
-            onChangeText={setDraft}
-            onSubmitEditing={onAdd}
+            value={mineDraft}
+            onChangeText={setMineDraft}
+            onSubmitEditing={onAddMine}
             returnKeyType="done"
           />
-          <Pressable style={styles.addButton} onPress={onAdd}>
+          <Pressable style={styles.addButton} onPress={onAddMine}>
             <Text style={styles.addButtonLabel}>+</Text>
           </Pressable>
         </View>
-
-        {chores.length === 0 ? (
-          <Text style={styles.muted}>No chores yet. Add what this home shares. 🧹</Text>
+        {myTasks.length === 0 && myChores.length === 0 ? (
+          <Text style={styles.muted}>Nothing on your plate. 🤍</Text>
         ) : (
-          chores.map((chore) => {
-            const holderId = effectiveTurn(memberIds, chore.turn?.id);
-            const mine = holderId === userId;
-            const open = openChoreId === chore.id;
-            const events = chore.events ?? [];
-            return (
-              <View key={chore.id} style={styles.choreCard}>
-                <Pressable
-                  style={styles.choreRow}
-                  onPress={() => setOpenChoreId(open ? null : chore.id)}
-                >
-                  <View style={styles.choreInfo}>
-                    <Text style={styles.choreName}>{chore.name}</Text>
-                    <Text style={[styles.turnNote, mine && styles.turnNoteMine]}>
-                      {mine ? 'your turn' : `${nameById[holderId ?? ''] ?? 'someone'}'s turn`}
-                    </Text>
-                  </View>
-                  {mine ? (
-                    <Pressable
-                      style={styles.pass}
-                      onPress={() => advance(chore.id, chore.name, holderId, 'pass')}
-                    >
-                      <Text style={styles.passLabel}>Pass</Text>
-                    </Pressable>
-                  ) : null}
-                  <Pressable
-                    style={styles.done}
-                    onPress={() => advance(chore.id, chore.name, holderId, 'done')}
-                  >
-                    <Text style={styles.doneLabel}>Done ✓</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.delete}
-                    onPress={() => onDelete(chore.id, chore.name)}
-                    hitSlop={8}
-                    accessibilityLabel={`Remove ${chore.name}`}
-                  >
-                    <Text style={styles.deleteLabel}>✕</Text>
-                  </Pressable>
-                </Pressable>
+          myTasks.map((t) => (
+            <View key={t.id} style={styles.mineRow}>
+              <Text style={styles.mineTitle}>{t.title}</Text>
+              <Pressable style={styles.done} onPress={() => onMineDone(t.id)}>
+                <Text style={styles.doneLabel}>Done ✓</Text>
+              </Pressable>
+              <Pressable
+                style={styles.delete}
+                onPress={() => onMineDelete(t.id)}
+                hitSlop={8}
+                accessibilityLabel={`Remove ${t.title}`}
+              >
+                <Text style={styles.deleteLabel}>✕</Text>
+              </Pressable>
+            </View>
+          ))
+        )}
 
-                {open ? (
-                  <View style={styles.history}>
-                    {events.length === 0 ? (
-                      <Text style={styles.historyEmpty}>No history yet.</Text>
-                    ) : (
-                      events.map((ev) => (
-                        <View key={ev.id} style={styles.historyRow}>
-                          <Text style={styles.historyText}>
-                            {ev.type === 'done'
-                              ? `${ev.by?.id === userId ? 'You' : (nameById[ev.by?.id ?? ''] ?? 'Someone')} did it`
-                              : `${ev.by?.id === userId ? 'You' : (nameById[ev.by?.id ?? ''] ?? 'Someone')} passed`}
-                          </Text>
-                          <Text style={styles.historyTime}>{timeAgo(Number(ev.at))}</Text>
-                        </View>
-                      ))
-                    )}
-                  </View>
-                ) : null}
-              </View>
-            );
-          })
+        <Text style={styles.section}>House</Text>
+        <View style={styles.addRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="Add a house chore… (trash)"
+            placeholderTextColor={Roomie.sub}
+            value={houseDraft}
+            onChangeText={setHouseDraft}
+            onSubmitEditing={onAddHouse}
+            returnKeyType="done"
+          />
+          <Pressable style={styles.addButton} onPress={onAddHouse}>
+            <Text style={styles.addButtonLabel}>+</Text>
+          </Pressable>
+        </View>
+        {otherChores.length === 0 ? (
+          <Text style={styles.muted}>All quiet. 🌿</Text>
+        ) : (
+          otherChores.map(renderChore)
         )}
       </ScrollView>
     </SafeAreaView>
@@ -260,6 +328,14 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   container: { padding: 24, gap: 12 },
   heading: { fontSize: 34, fontFamily: RoomieFonts.displayBold, color: Roomie.ink },
+  section: {
+    fontSize: 12,
+    fontFamily: RoomieFonts.bodyBold,
+    color: Roomie.sub,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginTop: 8,
+  },
   addRow: { flexDirection: 'row', gap: 8 },
   input: {
     flex: 1,
@@ -294,11 +370,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 4,
   },
-  choreRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
-  choreInfo: { flex: 1, gap: 2 },
-  choreName: { fontSize: 16, fontFamily: RoomieFonts.bodyBold, color: Roomie.ink },
-  turnNote: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.sub },
-  turnNoteMine: { color: Roomie.accent, fontFamily: RoomieFonts.bodySemi },
+  choreRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
+  choreName: { flex: 1, fontSize: 16, fontFamily: RoomieFonts.bodyBold, color: Roomie.ink },
+  turnPill: {
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: Roomie.input,
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+  },
+  turnPillMine: { backgroundColor: Roomie.accent, borderColor: Roomie.accent },
+  turnPillLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
+  turnPillLabelMine: { color: Roomie.onAccent, fontFamily: RoomieFonts.bodyBold },
   pass: {
     borderWidth: 1,
     borderColor: Roomie.hairline,
@@ -327,4 +411,6 @@ const styles = StyleSheet.create({
   historyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
   historyText: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.ink },
   historyTime: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.sub },
+  mineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  mineTitle: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
 });

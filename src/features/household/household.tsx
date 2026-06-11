@@ -14,6 +14,10 @@ import { ActivityFeed } from '@/features/activity/activity-feed';
 
 const INVITE_CODE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// New homes start with the classics — removable like any other chore.
+// First turn: the creator (they're the only member at that moment anyway).
+const STARTER_CHORES = ['Trash', 'Dishes', 'Bathroom', 'Floors'];
+
 export function HouseholdGate({ userId, userName }: { userId: string; userName: string }) {
   const { isLoading, error, data } = db.useQuery({
     memberships: {
@@ -112,6 +116,12 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
         db.tx.memberships[membershipId]
           .update({ role: 'owner', status: 'active', displayName: userName, joinedAt: now })
           .link({ household: householdId, user: userId }),
+        // Seed the starter chores quietly (no diary spam).
+        ...STARTER_CHORES.map((name, idx) =>
+          db.tx.chores[id()]
+            .update({ name, createdAt: now + idx, updatedAt: now + idx })
+            .link({ household: householdId, turn: userId }),
+        ),
       ]);
       await logActivity({
         householdId,
