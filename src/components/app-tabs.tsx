@@ -21,6 +21,11 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="kitchen">
+        <NativeTabs.Trigger.Label>Kitchen</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="basket" renderingMode="template" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="money">
         <NativeTabs.Trigger.Label>Money</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

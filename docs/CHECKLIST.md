@@ -11,7 +11,7 @@ Kafan karışınca SADECE buraya bak. Detaylı "ne/neden" için: [`ROADMAP_ELI5.
 - ⬜ = yapılmadı
 - Bir maddeyi ✅ yapmak için yanındaki **"Test:"** adımını gerçekten yap. Test yapmadan ✅ yok.
 
-> 🧭 **ŞU AN SIRADAKİ TEK İŞ → Faz 2: Money'yi 2 telefonda test et (🔶'leri ✅ yap).** Başka şeye bakma.
+> 🧭 **ŞU AN SIRADAKİ TEK İŞ → Faz 3: Kitchen (kiler + alışveriş listesi).** Money'nin 2 çip senaryosu dogfood'da kendiliğinden doğrulanacak.
 
 ---
 
@@ -45,8 +45,9 @@ Kafan karışınca SADECE buraya bak. Detaylı "ne/neden" için: [`ROADMAP_ELI5.
 - ✅ **Senkron** — B, A'nın harcamasını + borcu anında gördü (E2E + 2 sim dogfood 11 Haz)
 - ✅ **"Ödedim" (settle)** — Serra 2 simde doğruladı 11 Haz
 - ✅ **🐛 Ev-arkadaşı-görünmezlik bug'ı** — E2E yakaladı, fix canlıda (instant.perms.ts: aynı evdekiler birbirini görür; commit 00ecb65). Bu fix'ten önce Money 2+ kişide tamamen bozuktu
-- ⬜ **Ödeyeni seçme** — varsayılan "ben", ama Mert ödediyse Mert seçilebilir. Test: "Mert ödedi" gir → borçlar Mert'e doğru çıkıyor
-- ⬜ **Paylaşanları seçme** — varsayılan "tüm ev", ama "sadece ikimiz" seçilebilir. Test: 2 kişilik harcama → 3. kişi borçlanmıyor
+- 🔶 **Ödeyeni seçme** — çipler canlıda; "başkası ödedi" senaryosu dogfood'da doğrulanacak
+- 🔶 **Paylaşanları seçme** — çipler canlıda; "sadece ikimiz" senaryosu dogfood'da doğrulanacak
+- ✅ **Gizlilik: sadece kendi borçların** — "Your balance" filtresi, Serra doğruladı (7bf19e0, 11 Haz)
 - ✅ **Harcama geçmişi + silme** — Serra 2 simde doğruladı 11 Haz (sil → borçlar geri düzeldi)
 - ✅ **Money matematiğine test** — vitest kuruldu, 19 test yeşil (`npm test`), €700/3 dogfood vakası dahil (11 Haz)
 - 🔶 **Günlüğe düşüyor** — Test: harcama ekleyince ev günlüğünde "X harcama ekledi" çıkıyor
@@ -72,10 +73,16 @@ veya bilgisayarda simülatör. İki cihazda **farklı hesapla** gir, ikisi de ay
 ## Faz 3 — 🍳 Kitchen odası (elle)
 
 **Amaç:** Ortak kiler + alışveriş listesi. (Feed Me/tarif bu fazda YOK — sonra.)
+**Tasarım kararları (Serra, 11 Haz):** alias tablosu VAR (süt=milk birleşir, kategori emojisi,
+raf ömrü arkaplanda) · "Got it" → opsiyonel "Add to Money? €__" köprüsü VAR · bozulmada küçük
+sessiz işaret VAR (puan/sayaç yok) · her "aldım" tarihiyle purchase-log'a yazılır (ileride
+cadence/"bitmek üzere" tahmini bedavaya çalışsın diye — görünmez temel).
 
-- ⬜ **Kiler listesi** — ekle / çıkar / "bitti" işaretle. Test: süt ekle → herkeste görünüyor
+- ⬜ **Kiler listesi** — ekle / çıkar / "bitti" işaretle; "süt" ve "milk" tek kayda düşer. Test: süt ekle → herkeste görünüyor
 - ⬜ **"Bitti" → alışveriş listesine düşer** — Test: sütü "bitti" yap → alışveriş listesinde
 - ⬜ **"Ben alırım" üstlenme** — Test: bir kalemi üstlen → diğer telefonda "X alacak" görünüyor (çift alım önlenir)
+- ⬜ **"Got it ✓" + Money köprüsü** — Test: aldım de → €5 gir → Money'de "Milk €5" harcaması, kiler "var"a döner
+- ⬜ **Bozulma işareti** — Test: raf ömrü geçmiş üründe soluk işaret görünüyor (utandırma yok)
 - ⬜ **Günlüğe düşüyor** — Test: "kahve bitti" → günlükte
 
 **Faz 3 BİTTİ =** hepsi ✅ + ev bir alışverişi app üzerinden döndürdü.

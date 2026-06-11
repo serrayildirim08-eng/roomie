@@ -57,6 +57,26 @@ const _schema = i.schema({
       currency: i.string(),
       createdAt: i.date().indexed(),
     }),
+
+    // Kitchen — one row per item the home knows about. status 'in' = in the
+    // pantry, 'out' = on the shopping list. normalizedName dedupes "süt"/"milk".
+    pantryItems: i.entity({
+      name: i.string(),
+      normalizedName: i.string().indexed(),
+      category: i.string(), // GroceryCategory
+      status: i.string(), // 'in' | 'out'
+      shelfLifeDays: i.number().optional(), // null = unknown → never ages
+      addedAt: i.date().indexed(), // reset on every restock; drives aging
+      createdAt: i.date().indexed(),
+      updatedAt: i.date().indexed(),
+    }),
+
+    // Kitchen — append-only purchase log ("got it" events). Invisible in v1;
+    // feeds the cadence/"running low" predictions later.
+    purchases: i.entity({
+      itemName: i.string().indexed(), // normalized name
+      at: i.date().indexed(),
+    }),
   },
 
   links: {
@@ -109,6 +129,24 @@ const _schema = i.schema({
     settlementTo: {
       forward: { on: 'settlements', has: 'one', label: 'toUser' },
       reverse: { on: '$users', has: 'many', label: 'settlementsIn' },
+    },
+
+    // Kitchen links.
+    pantryHousehold: {
+      forward: { on: 'pantryItems', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'pantryItems' },
+    },
+    pantryClaimedBy: {
+      forward: { on: 'pantryItems', has: 'one', label: 'claimedBy' },
+      reverse: { on: '$users', has: 'many', label: 'claimedItems' },
+    },
+    purchaseHousehold: {
+      forward: { on: 'purchases', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'purchases' },
+    },
+    purchaseBy: {
+      forward: { on: 'purchases', has: 'one', label: 'by' },
+      reverse: { on: '$users', has: 'many', label: 'purchases' },
     },
   },
 });

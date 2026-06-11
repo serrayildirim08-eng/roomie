@@ -15,7 +15,12 @@ export type ActivityType =
   | 'member_left'
   | 'expense_added'
   | 'expense_deleted'
-  | 'debt_settled';
+  | 'debt_settled'
+  | 'pantry_added'
+  | 'pantry_out'
+  | 'pantry_claimed'
+  | 'pantry_got'
+  | 'pantry_removed';
 
 function eur(metadata: unknown): string {
   const cents =
@@ -79,6 +84,26 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
     case 'debt_settled': {
       const to = metaString(metadata, 'toName') ?? 'someone';
       return { icon: '✅', text: `${who} paid ${to} ${eur(metadata)}` };
+    }
+    case 'pantry_added': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🧺', text: `${who} stocked ${item ?? 'something'}` };
+    }
+    case 'pantry_out': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🫙', text: `${who} says ${item ?? 'something'} is out` };
+    }
+    case 'pantry_claimed': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🛒', text: `${who} is getting ${item ?? 'something'}` };
+    }
+    case 'pantry_got': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🛍️', text: `${who} got ${item ?? 'something'}` };
+    }
+    case 'pantry_removed': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🗑️', text: `${who} removed ${item ?? 'something'}` };
     }
     default:
       return { icon: '•', text: `${who} did something` };
