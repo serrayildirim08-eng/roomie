@@ -11,6 +11,7 @@ import { Roomie, RoomieFonts } from '@/constants/theme';
 import { db } from '@/lib/db';
 import { logActivity } from '@/features/activity/activity';
 import { ActivityFeed } from '@/features/activity/activity-feed';
+import { BrainInput } from '@/features/brain/brain-input';
 
 import { STARTER_CHORES } from '@/features/tasks/starter';
 
@@ -258,6 +259,8 @@ function HouseholdHome({
 
   return (
     <View style={styles.block}>
+      <BrainInput householdId={code} userId={userId} userName={userName} />
+
       <Text style={styles.eyebrow}>Your home</Text>
       <Text style={styles.homeName}>{name} 🏡</Text>
       <Text style={styles.sub}>You&apos;re the {role}.</Text>

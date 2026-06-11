@@ -45,3 +45,6 @@ example
 # generated native folders
 /ios
 /android
+
+# worker secrets (local dev)
+workers/brain/.dev.vars

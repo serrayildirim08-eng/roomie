@@ -1,0 +1,19 @@
+# Roomie Brain — draft generator. Deliberately separate from Ollie's ai-proxy
+# (own worker, own secrets, own fate). The worker NEVER persists anything:
+# it turns one household note into draft fragments; the app writes only after
+# the user confirms (draft-first, the inverse of Ollie's write-then-undo).
+#
+# Secrets (wrangler secret put):
+#   GROQ_API_KEY  — primary classifier (gpt-oss-120b, JSON mode)
+#   CLERK_ISSUER  — Roomie's Clerk instance (JWT verify)
+# Fallback model is Cloudflare Workers AI (binding below, no key needed).
+
+name = "roomie-brain"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+[ai]
+binding = "AI"
+
+[observability]
+enabled = true

@@ -1,0 +1,19 @@
+{
+  "name": "roomie-brain",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Roomie's brain — household note → draft fragments (never persists).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail roomie-brain"
+  },
+  "dependencies": {
+    "jose": "^5.9.6",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0",
+    "typescript": "~5.7.0"
+  }
+}
