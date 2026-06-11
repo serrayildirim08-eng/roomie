@@ -6,6 +6,9 @@ Bu doküman Roomie'nin **ne olduğunu, ne işe yaradığını, hangi özellikler
 bunların nasıl çalıştığını, ne ile yapılacağını, hangi sırayla ve ne kadar sürede
 biteceğini** en sade dille anlatır. Kafan karışınca buraya dön.
 
+> ⚠️ **"Neredeyim, sırada ne var?" sorusu için → [`CHECKLIST.md`](CHECKLIST.md)** (tek kaynak,
+> kutucuklu). Bu dosya "ne ve neden"i anlatır; ilerleme oradan takip edilir.
+
 > Benzetme: Roomie'yi **3 odalı bir ev inşa etmek** gibi düşüneceğiz. Önce temel,
 > sonra odalar, en son akıllı sistem (kamera + beyin). Her bölümde bu benzetmeye döneceğiz.
 

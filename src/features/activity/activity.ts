@@ -9,7 +9,12 @@ import { id } from '@instantdb/react-native';
 
 import { db } from '@/lib/db';
 
-export type ActivityType = 'household_created' | 'member_joined' | 'expense_added' | 'debt_settled';
+export type ActivityType =
+  | 'household_created'
+  | 'member_joined'
+  | 'expense_added'
+  | 'expense_deleted'
+  | 'debt_settled';
 
 function eur(metadata: unknown): string {
   const cents =
@@ -63,6 +68,10 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
         icon: '💸',
         text: `${who} added ${title ? `"${title}"` : 'an expense'} — ${eur(metadata)}`,
       };
+    }
+    case 'expense_deleted': {
+      const title = metaString(metadata, 'title');
+      return { icon: '🗑️', text: `${who} removed ${title ? `"${title}"` : 'an expense'}` };
     }
     case 'debt_settled': {
       const to = metaString(metadata, 'toName') ?? 'someone';

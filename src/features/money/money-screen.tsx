@@ -1,11 +1,13 @@
 // Money — the Splitwise core, v1: equal split, manual entry. You add an expense
-// (you paid, split equally among everyone), the app shows who owes whom, and you
-// can settle a debt. OCR / pick-payer / unequal splits come later.
+// (pick who paid, pick who shares — defaults: you paid, everyone shares), the app
+// shows who owes whom, and you can settle a debt. Past expenses are listed and a
+// wrong one can be deleted. OCR / unequal splits come later.
 
 import { id } from '@instantdb/react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,6 +42,9 @@ export function MoneyScreen({ userId }: { userId: string }) {
 
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
+  // null = defaults (payer: me, participants: everyone) until the user picks.
+  const [paidById, setPaidById] = useState<string | null>(null);
+  const [pickedIds, setPickedIds] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -87,6 +92,22 @@ export function MoneyScreen({ userId }: { userId: string }) {
   const net = computeNetCents(members, expenses, settlements);
   const debts = simplifyDebts(net);
 
+  // Effective form choices (fall back to defaults until the user picks).
+  const payerId = paidById ?? userId;
+  const participantIds = pickedIds ?? members.map((m) => m.userId);
+
+  const toggleParticipant = (memberId: string) => {
+    const next = participantIds.includes(memberId)
+      ? participantIds.filter((p) => p !== memberId)
+      : [...participantIds, memberId];
+    if (next.length === 0) return; // at least one person shares the expense
+    setPickedIds(next);
+  };
+
+  const recentExpenses = [...household.expenses].sort(
+    (a, b) => Number(b.createdAt) - Number(a.createdAt),
+  );
+
   const onAdd = async () => {
     const trimmed = title.trim();
     const cents = parseAmountToCents(amount);
@@ -101,8 +122,8 @@ export function MoneyScreen({ userId }: { userId: string }) {
           .update({ title: trimmed, amountCents: cents, currency: 'EUR', createdAt: nowMs() })
           .link({
             household: household.id,
-            paidBy: userId,
-            participants: members.map((m) => m.userId),
+            paidBy: payerId,
+            participants: participantIds,
           }),
       );
       await logActivity({
@@ -110,15 +131,39 @@ export function MoneyScreen({ userId }: { userId: string }) {
         actorId: userId,
         actorName: myName,
         type: 'expense_added',
-        metadata: { title: trimmed, amountCents: cents },
+        metadata: { title: trimmed, amountCents: cents, paidByName: nameById[payerId] },
       });
       setTitle('');
       setAmount('');
+      setPaidById(null);
+      setPickedIds(null);
     } catch {
       setFormError('Could not add. Try again.');
     } finally {
       setBusy(false);
     }
+  };
+
+  const onDelete = (expenseId: string, expenseTitle: string) => {
+    Alert.alert('Delete expense?', `"${expenseTitle}" will be removed and debts recalculated.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            await db.transact(db.tx.expenses[expenseId].delete());
+            await logActivity({
+              householdId: household.id,
+              actorId: userId,
+              actorName: myName,
+              type: 'expense_deleted',
+              metadata: { title: expenseTitle },
+            });
+          })();
+        },
+      },
+    ]);
   };
 
   const onSettle = async (fromId: string, toId: string, amountCents: number) => {
@@ -159,7 +204,43 @@ export function MoneyScreen({ userId }: { userId: string }) {
             value={amount}
             onChangeText={setAmount}
           />
-          <Text style={styles.hint}>You paid · split equally among {members.length}</Text>
+          <Text style={styles.pickerLabel}>Paid by</Text>
+          <View style={styles.chipRow}>
+            {members.map((m) => {
+              const selected = m.userId === payerId;
+              return (
+                <Pressable
+                  key={m.userId}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                  onPress={() => setPaidById(m.userId)}
+                >
+                  <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                    {m.userId === userId ? 'You' : m.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.pickerLabel}>Split between</Text>
+          <View style={styles.chipRow}>
+            {members.map((m) => {
+              const selected = participantIds.includes(m.userId);
+              return (
+                <Pressable
+                  key={m.userId}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                  onPress={() => toggleParticipant(m.userId)}
+                >
+                  <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                    {m.userId === userId ? 'You' : m.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.hint}>Split equally among {participantIds.length}</Text>
           {formError ? <Text style={styles.error}>{formError}</Text> : null}
           <Pressable
             style={[styles.button, busy && styles.disabled]}
@@ -200,6 +281,32 @@ export function MoneyScreen({ userId }: { userId: string }) {
             );
           })
         )}
+
+        <Text style={styles.section}>Recent expenses</Text>
+        {recentExpenses.length === 0 ? (
+          <Text style={styles.muted}>Nothing yet.</Text>
+        ) : (
+          recentExpenses.map((e) => (
+            <View key={e.id} style={styles.expenseRow}>
+              <View style={styles.expenseInfo}>
+                <Text style={styles.debtText}>{e.title}</Text>
+                <Text style={styles.expenseMeta}>
+                  {e.paidBy?.id === userId ? 'You' : (nameById[e.paidBy?.id ?? ''] ?? 'Someone')}{' '}
+                  paid · {e.participants.length} sharing
+                </Text>
+              </View>
+              <Text style={styles.debtAmount}>{formatEur(e.amountCents)}</Text>
+              <Pressable
+                style={styles.delete}
+                onPress={() => onDelete(e.id, e.title)}
+                hitSlop={8}
+                accessibilityLabel={`Delete ${e.title}`}
+              >
+                <Text style={styles.deleteLabel}>✕</Text>
+              </Pressable>
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -231,6 +338,19 @@ const styles = StyleSheet.create({
     color: '#111',
   },
   hint: { fontSize: 13, color: '#9b9b9b' },
+  pickerLabel: { fontSize: 13, fontWeight: '600', color: '#6b6b6b' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    borderWidth: 1,
+    borderColor: '#e2e2e2',
+    backgroundColor: '#fff',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  chipSelected: { backgroundColor: '#111', borderColor: '#111' },
+  chipLabel: { fontSize: 14, color: '#111' },
+  chipLabelSelected: { color: '#fff', fontWeight: '600' },
   button: { backgroundColor: '#111', borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
   disabled: { opacity: 0.6 },
   buttonLabel: { color: '#fff', fontSize: 16, fontWeight: '600' },
@@ -247,5 +367,10 @@ const styles = StyleSheet.create({
   debtAmount: { fontSize: 15, fontWeight: '700', color: '#111' },
   settle: { backgroundColor: '#111', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14 },
   settleLabel: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  expenseRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  expenseInfo: { flex: 1, gap: 2 },
+  expenseMeta: { fontSize: 12, color: '#9b9b9b' },
+  delete: { padding: 6 },
+  deleteLabel: { fontSize: 15, color: '#c0392b' },
   error: { color: '#c0392b', fontSize: 14 },
 });
