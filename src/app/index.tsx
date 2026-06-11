@@ -5,6 +5,7 @@ import { useAuth, useUser } from '@clerk/expo';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Roomie, RoomieFonts } from '@/constants/theme';
 import { HouseholdGate } from '@/features/household/household';
 import { db } from '@/lib/db';
 
@@ -35,10 +36,10 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: Roomie.canvas },
   container: { flex: 1, justifyContent: 'center', paddingHorizontal: 28, gap: 10 },
-  hello: { fontSize: 30, fontWeight: '700', color: '#111' },
-  note: { fontSize: 14, color: '#9b9b9b', marginTop: 4 },
+  hello: { fontSize: 30, fontFamily: RoomieFonts.display, color: Roomie.ink },
+  note: { fontSize: 14, fontFamily: RoomieFonts.body, color: Roomie.sub, marginTop: 4 },
   signout: { marginTop: 28, alignSelf: 'flex-start' },
-  signoutLabel: { fontSize: 15, color: '#c0392b', fontWeight: '600' },
+  signoutLabel: { fontSize: 15, color: Roomie.danger, fontFamily: RoomieFonts.bodySemi },
 });

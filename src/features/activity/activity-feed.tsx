@@ -3,6 +3,7 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 
+import { Roomie, RoomieFonts } from '@/constants/theme';
 import { db } from '@/lib/db';
 
 import { describeEvent, timeAgo } from './activity';
@@ -25,7 +26,7 @@ export function ActivityFeed({ householdId }: { householdId: string }) {
 
   const events = data.activityEvents;
   if (events.length === 0) {
-    return <Text style={styles.muted}>Nothing has happened yet.</Text>;
+    return <Text style={styles.muted}>Quiet so far. 🌿</Text>;
   }
 
   return (
@@ -48,15 +49,16 @@ export function ActivityFeed({ householdId }: { householdId: string }) {
 const styles = StyleSheet.create({
   list: { marginTop: 20, gap: 2 },
   heading: {
-    fontSize: 13,
-    color: '#9b9b9b',
+    fontSize: 12,
+    fontFamily: RoomieFonts.bodyBold,
+    color: Roomie.sub,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     marginBottom: 8,
   },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10 },
   icon: { fontSize: 16, width: 22 },
-  text: { flex: 1, fontSize: 15, color: '#111' },
-  time: { fontSize: 12, color: '#9b9b9b' },
-  muted: { fontSize: 14, color: '#9b9b9b', marginTop: 20 },
+  text: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.ink },
+  time: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.sub },
+  muted: { fontSize: 14, fontFamily: RoomieFonts.body, color: Roomie.sub, marginTop: 20 },
 });

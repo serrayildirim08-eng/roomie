@@ -9,7 +9,22 @@ import { id } from '@instantdb/react-native';
 
 import { db } from '@/lib/db';
 
-export type ActivityType = 'household_created' | 'member_joined' | 'expense_added' | 'debt_settled';
+export type ActivityType =
+  | 'household_created'
+  | 'member_joined'
+  | 'member_left'
+  | 'expense_added'
+  | 'expense_deleted'
+  | 'debt_settled'
+  | 'pantry_added'
+  | 'pantry_out'
+  | 'pantry_claimed'
+  | 'pantry_got'
+  | 'pantry_removed'
+  | 'chore_added'
+  | 'chore_done'
+  | 'chore_passed'
+  | 'chore_removed';
 
 function eur(metadata: unknown): string {
   const cents =
@@ -57,6 +72,8 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
       return { icon: '🏠', text: `${who} created the home` };
     case 'member_joined':
       return { icon: '👋', text: `${who} joined` };
+    case 'member_left':
+      return { icon: '🕊️', text: `${who} moved out` };
     case 'expense_added': {
       const title = metaString(metadata, 'title');
       return {
@@ -64,9 +81,49 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
         text: `${who} added ${title ? `"${title}"` : 'an expense'} — ${eur(metadata)}`,
       };
     }
+    case 'expense_deleted': {
+      const title = metaString(metadata, 'title');
+      return { icon: '🗑️', text: `${who} removed ${title ? `"${title}"` : 'an expense'}` };
+    }
     case 'debt_settled': {
       const to = metaString(metadata, 'toName') ?? 'someone';
       return { icon: '✅', text: `${who} paid ${to} ${eur(metadata)}` };
+    }
+    case 'pantry_added': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🧺', text: `${who} stocked ${item ?? 'something'}` };
+    }
+    case 'pantry_out': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🫙', text: `${who} says ${item ?? 'something'} is out` };
+    }
+    case 'pantry_claimed': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🛒', text: `${who} is getting ${item ?? 'something'}` };
+    }
+    case 'pantry_got': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🛍️', text: `${who} got ${item ?? 'something'}` };
+    }
+    case 'pantry_removed': {
+      const item = metaString(metadata, 'item');
+      return { icon: '🗑️', text: `${who} removed ${item ?? 'something'}` };
+    }
+    case 'chore_added': {
+      const chore = metaString(metadata, 'chore');
+      return { icon: '🧹', text: `${who} added a chore: ${chore ?? 'something'}` };
+    }
+    case 'chore_done': {
+      const chore = metaString(metadata, 'chore');
+      return { icon: '✨', text: `${who} did ${chore ?? 'a chore'}` };
+    }
+    case 'chore_passed': {
+      const chore = metaString(metadata, 'chore');
+      return { icon: '↪️', text: `${chore ?? 'a chore'} moved on from ${who}` };
+    }
+    case 'chore_removed': {
+      const chore = metaString(metadata, 'chore');
+      return { icon: '🗑️', text: `${who} removed ${chore ?? 'a chore'}` };
     }
     default:
       return { icon: '•', text: `${who} did something` };

@@ -57,6 +57,49 @@ const _schema = i.schema({
       currency: i.string(),
       createdAt: i.date().indexed(),
     }),
+
+    // Kitchen — one row per item the home knows about. status 'in' = in the
+    // pantry, 'out' = on the shopping list. normalizedName dedupes "süt"/"milk".
+    pantryItems: i.entity({
+      name: i.string(),
+      normalizedName: i.string().indexed(),
+      category: i.string(), // GroceryCategory
+      status: i.string(), // 'in' | 'out'
+      shelfLifeDays: i.number().optional(), // null = unknown → never ages
+      addedAt: i.date().indexed(), // reset on every restock; drives aging
+      createdAt: i.date().indexed(),
+      updatedAt: i.date().indexed(),
+    }),
+
+    // Kitchen — append-only purchase log ("got it" events). Invisible in v1;
+    // feeds the cadence/"running low" predictions later.
+    purchases: i.entity({
+      itemName: i.string().indexed(), // normalized name
+      at: i.date().indexed(),
+    }),
+
+    // Tasks — a chore the home defined. The current turn holder lives in the
+    // `turn` link; rotation order is membership join order.
+    chores: i.entity({
+      name: i.string(),
+      createdAt: i.date().indexed(),
+      updatedAt: i.date().indexed(),
+    }),
+
+    // Tasks — append-only effort diary: who actually did (or passed) what.
+    // History only, never counts — the no-shame rule.
+    choreEvents: i.entity({
+      type: i.string(), // 'done' | 'pass'
+      at: i.date().indexed(),
+    }),
+
+    // Tasks — personal to-dos. One owner, no rotation. Scoped to the
+    // household so "need a favor" can read them later.
+    personalTasks: i.entity({
+      title: i.string(),
+      status: i.string(), // 'open' | 'done'
+      createdAt: i.date().indexed(),
+    }),
   },
 
   links: {
@@ -109,6 +152,50 @@ const _schema = i.schema({
     settlementTo: {
       forward: { on: 'settlements', has: 'one', label: 'toUser' },
       reverse: { on: '$users', has: 'many', label: 'settlementsIn' },
+    },
+
+    // Kitchen links.
+    pantryHousehold: {
+      forward: { on: 'pantryItems', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'pantryItems' },
+    },
+    pantryClaimedBy: {
+      forward: { on: 'pantryItems', has: 'one', label: 'claimedBy' },
+      reverse: { on: '$users', has: 'many', label: 'claimedItems' },
+    },
+    purchaseHousehold: {
+      forward: { on: 'purchases', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'purchases' },
+    },
+    purchaseBy: {
+      forward: { on: 'purchases', has: 'one', label: 'by' },
+      reverse: { on: '$users', has: 'many', label: 'purchases' },
+    },
+
+    // Tasks links.
+    choreHousehold: {
+      forward: { on: 'chores', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'chores' },
+    },
+    choreTurn: {
+      forward: { on: 'chores', has: 'one', label: 'turn' },
+      reverse: { on: '$users', has: 'many', label: 'choreTurns' },
+    },
+    choreEventChore: {
+      forward: { on: 'choreEvents', has: 'one', label: 'chore' },
+      reverse: { on: 'chores', has: 'many', label: 'events' },
+    },
+    choreEventBy: {
+      forward: { on: 'choreEvents', has: 'one', label: 'by' },
+      reverse: { on: '$users', has: 'many', label: 'choreEvents' },
+    },
+    personalTaskHousehold: {
+      forward: { on: 'personalTasks', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'personalTasks' },
+    },
+    personalTaskOwner: {
+      forward: { on: 'personalTasks', has: 'one', label: 'owner' },
+      reverse: { on: '$users', has: 'many', label: 'personalTasks' },
     },
   },
 });

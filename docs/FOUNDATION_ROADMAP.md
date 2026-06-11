@@ -2,6 +2,9 @@
 
 _Son güncelleme: 9 Haziran 2026_
 
+> ⚠️ **Durum takibi artık burada DEĞİL → [`CHECKLIST.md`](CHECKLIST.md)** (tek kaynak).
+> Bu dosya sadece "temel neden böyle kuruldu" açıklaması olarak duruyor.
+
 Bu, modüllerden (Money / Kitchen / Tasks) **önce** kurulması gereken iskeletin planıdır.
 Tam ürün planı için bkz. [`ROADMAP_ELI5.md`](ROADMAP_ELI5.md). Ollie'den ne çekileceği için
 bkz. [`OLLIE_REUSE_AUDIT.md`](OLLIE_REUSE_AUDIT.md).

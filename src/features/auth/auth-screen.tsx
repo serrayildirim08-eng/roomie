@@ -22,6 +22,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Roomie, RoomieFonts } from '@/constants/theme';
+
 type Mode = 'signIn' | 'signUp';
 
 function messageFromError(err: unknown): string {
@@ -135,7 +137,9 @@ export function AuthScreen() {
   return (
     <Shell>
       <Text style={styles.title}>Roomie</Text>
-      <Text style={styles.subtitle}>{isSignIn ? 'Welcome back.' : 'Create your account.'}</Text>
+      <Text style={styles.subtitle}>
+        {isSignIn ? 'Good to see you. 🏡' : 'Let’s get you home. 🏡'}
+      </Text>
 
       <TextInput
         style={styles.input}
@@ -224,29 +228,40 @@ function LinkButton({ label, onPress }: { label: string; onPress: () => void }) 
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: Roomie.canvas },
   container: { flex: 1, justifyContent: 'center', paddingHorizontal: 28, gap: 12 },
-  title: { fontSize: 34, fontWeight: '700', color: '#111' },
-  subtitle: { fontSize: 16, color: '#666', marginBottom: 12 },
+  title: { fontSize: 44, fontFamily: RoomieFonts.displayBold, color: Roomie.ink },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: RoomieFonts.body,
+    color: Roomie.sub,
+    marginBottom: 12,
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#e2e2e2',
-    borderRadius: 12,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#111',
+    fontFamily: RoomieFonts.body,
+    color: Roomie.ink,
   },
   button: {
-    backgroundColor: '#111',
-    borderRadius: 12,
+    backgroundColor: Roomie.accent,
+    borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: Roomie.accent,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonLabel: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonLabel: { color: Roomie.onAccent, fontSize: 16, fontFamily: RoomieFonts.bodyBold },
   link: { alignItems: 'center', paddingVertical: 12 },
-  linkLabel: { color: '#666', fontSize: 14 },
-  error: { color: '#c0392b', fontSize: 14 },
+  linkLabel: { color: Roomie.sub, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
+  error: { color: Roomie.danger, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
 });

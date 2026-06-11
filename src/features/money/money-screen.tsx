@@ -1,11 +1,13 @@
 // Money — the Splitwise core, v1: equal split, manual entry. You add an expense
-// (you paid, split equally among everyone), the app shows who owes whom, and you
-// can settle a debt. OCR / pick-payer / unequal splits come later.
+// (pick who paid, pick who shares — defaults: you paid, everyone shares), the app
+// shows who owes whom, and you can settle a debt. Past expenses are listed and a
+// wrong one can be deleted. OCR / unequal splits come later.
 
 import { id } from '@instantdb/react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Roomie, RoomieFonts } from '@/constants/theme';
 import { logActivity } from '@/features/activity/activity';
 import { db } from '@/lib/db';
 
@@ -25,6 +28,12 @@ import {
   parseAmountToCents,
   simplifyDebts,
 } from './money-logic';
+
+// "vfya+clerk_test@example.com" → "vfya"
+function emailName(email?: string): string | undefined {
+  const local = email?.split('@')[0]?.replace(/\+.*$/, '');
+  return local || undefined;
+}
 
 export function MoneyScreen({ userId }: { userId: string }) {
   const { isLoading, error, data } = db.useQuery({
@@ -40,6 +49,9 @@ export function MoneyScreen({ userId }: { userId: string }) {
 
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
+  // null = defaults (payer: me, participants: everyone) until the user picks.
+  const [paidById, setPaidById] = useState<string | null>(null);
+  const [pickedIds, setPickedIds] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -68,7 +80,12 @@ export function MoneyScreen({ userId }: { userId: string }) {
   }
 
   const members = household.memberships
-    .map((m) => ({ userId: m.user?.id ?? '', name: m.displayName ?? 'Someone' }))
+    .map((m) => ({
+      userId: m.user?.id ?? '',
+      // displayName is stamped at join (and self-healed on app open); fall back
+      // to the email's local part for old rows so nobody renders as "Someone".
+      name: m.displayName ?? emailName(m.user?.email) ?? 'Someone',
+    }))
     .filter((m) => m.userId);
   const nameById = Object.fromEntries(members.map((m) => [m.userId, m.name]));
   const myName = nameById[userId] ?? 'You';
@@ -85,7 +102,25 @@ export function MoneyScreen({ userId }: { userId: string }) {
   }));
 
   const net = computeNetCents(members, expenses, settlements);
-  const debts = simplifyDebts(net);
+  // Privacy: you only see debts you're part of — never what two housemates
+  // owe each other.
+  const debts = simplifyDebts(net).filter((d) => d.fromId === userId || d.toId === userId);
+
+  // Effective form choices (fall back to defaults until the user picks).
+  const payerId = paidById ?? userId;
+  const participantIds = pickedIds ?? members.map((m) => m.userId);
+
+  const toggleParticipant = (memberId: string) => {
+    const next = participantIds.includes(memberId)
+      ? participantIds.filter((p) => p !== memberId)
+      : [...participantIds, memberId];
+    if (next.length === 0) return; // at least one person shares the expense
+    setPickedIds(next);
+  };
+
+  const recentExpenses = [...household.expenses].sort(
+    (a, b) => Number(b.createdAt) - Number(a.createdAt),
+  );
 
   const onAdd = async () => {
     const trimmed = title.trim();
@@ -101,8 +136,8 @@ export function MoneyScreen({ userId }: { userId: string }) {
           .update({ title: trimmed, amountCents: cents, currency: 'EUR', createdAt: nowMs() })
           .link({
             household: household.id,
-            paidBy: userId,
-            participants: members.map((m) => m.userId),
+            paidBy: payerId,
+            participants: participantIds,
           }),
       );
       await logActivity({
@@ -110,15 +145,39 @@ export function MoneyScreen({ userId }: { userId: string }) {
         actorId: userId,
         actorName: myName,
         type: 'expense_added',
-        metadata: { title: trimmed, amountCents: cents },
+        metadata: { title: trimmed, amountCents: cents, paidByName: nameById[payerId] },
       });
       setTitle('');
       setAmount('');
+      setPaidById(null);
+      setPickedIds(null);
     } catch {
       setFormError('Could not add. Try again.');
     } finally {
       setBusy(false);
     }
+  };
+
+  const onDelete = (expenseId: string, expenseTitle: string) => {
+    Alert.alert('Delete expense?', `"${expenseTitle}" will be removed and debts recalculated.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            await db.transact(db.tx.expenses[expenseId].delete());
+            await logActivity({
+              householdId: household.id,
+              actorId: userId,
+              actorName: myName,
+              type: 'expense_deleted',
+              metadata: { title: expenseTitle },
+            });
+          })();
+        },
+      },
+    ]);
   };
 
   const onSettle = async (fromId: string, toId: string, amountCents: number) => {
@@ -159,7 +218,43 @@ export function MoneyScreen({ userId }: { userId: string }) {
             value={amount}
             onChangeText={setAmount}
           />
-          <Text style={styles.hint}>You paid · split equally among {members.length}</Text>
+          <Text style={styles.pickerLabel}>Paid by</Text>
+          <View style={styles.chipRow}>
+            {members.map((m) => {
+              const selected = m.userId === payerId;
+              return (
+                <Pressable
+                  key={m.userId}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                  onPress={() => setPaidById(m.userId)}
+                >
+                  <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                    {m.userId === userId ? 'You' : m.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.pickerLabel}>Split between</Text>
+          <View style={styles.chipRow}>
+            {members.map((m) => {
+              const selected = participantIds.includes(m.userId);
+              return (
+                <Pressable
+                  key={m.userId}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                  onPress={() => toggleParticipant(m.userId)}
+                >
+                  <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                    {m.userId === userId ? 'You' : m.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.hint}>Split equally among {participantIds.length}</Text>
           {formError ? <Text style={styles.error}>{formError}</Text> : null}
           <Pressable
             style={[styles.button, busy && styles.disabled]}
@@ -174,18 +269,15 @@ export function MoneyScreen({ userId }: { userId: string }) {
           </Pressable>
         </View>
 
-        <Text style={styles.section}>Who owes whom</Text>
+        <Text style={styles.section}>Your balance</Text>
         {debts.length === 0 ? (
-          <Text style={styles.muted}>All settled up. 🎉</Text>
+          <Text style={styles.muted}>You&apos;re all square. 🤍</Text>
         ) : (
           debts.map((d, idx) => {
             const youPay = d.fromId === userId;
-            const youGet = d.toId === userId;
             const label = youPay
               ? `You owe ${nameById[d.toId]}`
-              : youGet
-                ? `${nameById[d.fromId]} owes you`
-                : `${nameById[d.fromId]} owes ${nameById[d.toId]}`;
+              : `${nameById[d.fromId]} owes you`;
             return (
               <View key={idx} style={styles.debtRow}>
                 <Text style={styles.debtText}>{label}</Text>
@@ -199,6 +291,32 @@ export function MoneyScreen({ userId }: { userId: string }) {
               </View>
             );
           })
+        )}
+
+        <Text style={styles.section}>Recent expenses</Text>
+        {recentExpenses.length === 0 ? (
+          <Text style={styles.muted}>Nothing yet.</Text>
+        ) : (
+          recentExpenses.map((e) => (
+            <View key={e.id} style={styles.expenseRow}>
+              <View style={styles.expenseInfo}>
+                <Text style={styles.debtText}>{e.title}</Text>
+                <Text style={styles.expenseMeta}>
+                  {e.paidBy?.id === userId ? 'You' : (nameById[e.paidBy?.id ?? ''] ?? 'Someone')}{' '}
+                  paid · {e.participants.length} sharing
+                </Text>
+              </View>
+              <Text style={styles.debtAmount}>{formatEur(e.amountCents)}</Text>
+              <Pressable
+                style={styles.delete}
+                onPress={() => onDelete(e.id, e.title)}
+                hitSlop={8}
+                accessibilityLabel={`Delete ${e.title}`}
+              >
+                <Text style={styles.deleteLabel}>✕</Text>
+              </Pressable>
+            </View>
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -214,38 +332,79 @@ function Centered({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: Roomie.canvas },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   container: { padding: 24, gap: 16 },
-  heading: { fontSize: 30, fontWeight: '700', color: '#111' },
-  card: { backgroundColor: '#f5f5f5', borderRadius: 16, padding: 16, gap: 10 },
-  cardTitle: { fontSize: 16, fontWeight: '600', color: '#111' },
+  heading: { fontSize: 34, fontFamily: RoomieFonts.displayBold, color: Roomie.ink },
+  card: {
+    backgroundColor: Roomie.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+    padding: 16,
+    gap: 10,
+  },
+  cardTitle: { fontSize: 17, fontFamily: RoomieFonts.display, color: Roomie.ink },
   input: {
     borderWidth: 1,
-    borderColor: '#e2e2e2',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#111',
+    fontFamily: RoomieFonts.body,
+    color: Roomie.ink,
   },
-  hint: { fontSize: 13, color: '#9b9b9b' },
-  button: { backgroundColor: '#111', borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
+  hint: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.sub },
+  pickerLabel: { fontSize: 13, fontFamily: RoomieFonts.bodyBold, color: Roomie.sub },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  chipSelected: { backgroundColor: Roomie.accent, borderColor: Roomie.accent },
+  chipLabel: { fontSize: 14, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  chipLabelSelected: { color: Roomie.onAccent, fontFamily: RoomieFonts.bodyBold },
+  button: {
+    backgroundColor: Roomie.accent,
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: 'center',
+    shadowColor: Roomie.accent,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
   disabled: { opacity: 0.6 },
-  buttonLabel: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonLabel: { color: Roomie.onAccent, fontSize: 16, fontFamily: RoomieFonts.bodyBold },
   section: {
-    fontSize: 13,
-    color: '#9b9b9b',
+    fontSize: 12,
+    fontFamily: RoomieFonts.bodyBold,
+    color: Roomie.sub,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     marginTop: 8,
   },
-  muted: { fontSize: 15, color: '#9b9b9b' },
+  muted: { fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.sub },
   debtRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
-  debtText: { flex: 1, fontSize: 15, color: '#111' },
-  debtAmount: { fontSize: 15, fontWeight: '700', color: '#111' },
-  settle: { backgroundColor: '#111', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14 },
+  debtText: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  debtAmount: { fontSize: 15, fontFamily: RoomieFonts.bodyBold, color: Roomie.ink },
+  settle: {
+    backgroundColor: Roomie.sage,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
   settleLabel: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  expenseRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  expenseInfo: { flex: 1, gap: 2 },
+  expenseMeta: { fontSize: 12, color: '#9b9b9b' },
+  delete: { padding: 6 },
+  deleteLabel: { fontSize: 15, color: '#c0392b' },
   error: { color: '#c0392b', fontSize: 14 },
 });

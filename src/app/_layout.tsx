@@ -2,6 +2,13 @@ import 'react-native-get-random-values'; // polyfill for InstantDB id generation
 
 import { ClerkProvider, Show } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
+import { Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
+import {
+  Nunito_400Regular,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  useFonts,
+} from '@expo-google-fonts/nunito';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { useColorScheme } from 'react-native';
 
@@ -14,6 +21,14 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const [fontsLoaded] = useFonts({
+    Fraunces_600SemiBold,
+    Fraunces_700Bold,
+    Nunito_400Regular,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+  });
+  if (!fontsLoaded) return null; // splash stays up until the app's voice is ready
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <InstantClerkBridge />

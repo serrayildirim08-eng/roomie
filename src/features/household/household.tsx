@@ -4,12 +4,17 @@
 
 import * as Clipboard from 'expo-clipboard';
 import { id } from '@instantdb/react-native';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Roomie, RoomieFonts } from '@/constants/theme';
 import { db } from '@/lib/db';
 import { logActivity } from '@/features/activity/activity';
 import { ActivityFeed } from '@/features/activity/activity-feed';
+
+import { STARTER_CHORES } from '@/features/tasks/starter';
+
+const INVITE_CODE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function HouseholdGate({ userId, userName }: { userId: string; userName: string }) {
   const { isLoading, error, data } = db.useQuery({
@@ -18,6 +23,16 @@ export function HouseholdGate({ userId, userName }: { userId: string; userName: 
       household: {},
     },
   });
+
+  // Self-heal: older memberships were saved without a displayName (they render
+  // as "Someone" everywhere). Whenever the signed-in user opens the app with a
+  // real username, stamp it onto their own membership row.
+  const myMembership = data?.memberships[0];
+  useEffect(() => {
+    if (!myMembership || !userName || userName === 'Someone') return;
+    if (myMembership.displayName === userName) return;
+    void db.transact(db.tx.memberships[myMembership.id].update({ displayName: userName }));
+  }, [myMembership, userName]);
 
   if (isLoading) {
     return (
@@ -41,7 +56,16 @@ export function HouseholdGate({ userId, userName }: { userId: string; userName: 
     return <NoHousehold userId={userId} userName={userName} />;
   }
 
-  return <HouseholdHome name={household.name} role={membership.role} code={household.id} />;
+  return (
+    <HouseholdHome
+      name={household.name}
+      role={membership.role}
+      code={household.id}
+      membershipId={membership.id}
+      userId={userId}
+      userName={userName}
+    />
+  );
 }
 
 function NoHousehold({ userId, userName }: { userId: string; userName: string }) {
@@ -73,6 +97,10 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
       setError('Give your home a name.');
       return;
     }
+    if (INVITE_CODE_SHAPE.test(trimmed)) {
+      setError('That looks like an invite code — tap “Have a code? Join a home” below.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -86,6 +114,12 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
         db.tx.memberships[membershipId]
           .update({ role: 'owner', status: 'active', displayName: userName, joinedAt: now })
           .link({ household: householdId, user: userId }),
+        // Seed the starter chores quietly (no diary spam).
+        ...STARTER_CHORES.map((name, idx) =>
+          db.tx.chores[id()]
+            .update({ name, createdAt: now + idx, updatedAt: now + idx })
+            .link({ household: householdId, turn: userId }),
+        ),
       ]);
       await logActivity({
         householdId,
@@ -178,7 +212,21 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
   );
 }
 
-function HouseholdHome({ name, role, code }: { name: string; role: string; code: string }) {
+function HouseholdHome({
+  name,
+  role,
+  code,
+  membershipId,
+  userId,
+  userName,
+}: {
+  name: string;
+  role: string;
+  code: string;
+  membershipId: string;
+  userId: string;
+  userName: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   const onCopy = async () => {
@@ -187,10 +235,31 @@ function HouseholdHome({ name, role, code }: { name: string; role: string; code:
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const onLeave = () => {
+    Alert.alert('Leave this home?', `You'll leave “${name}”. You can rejoin with the code.`, [
+      { text: 'Stay', style: 'cancel' },
+      {
+        text: 'Leave',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            await db.transact(db.tx.memberships[membershipId].update({ status: 'removed' }));
+            await logActivity({
+              householdId: code,
+              actorId: userId,
+              actorName: userName,
+              type: 'member_left',
+            });
+          })();
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={styles.block}>
       <Text style={styles.eyebrow}>Your home</Text>
-      <Text style={styles.homeName}>{name}</Text>
+      <Text style={styles.homeName}>{name} 🏡</Text>
       <Text style={styles.sub}>You&apos;re the {role}.</Text>
 
       <View style={styles.inviteBox}>
@@ -204,6 +273,10 @@ function HouseholdHome({ name, role, code }: { name: string; role: string; code:
       </View>
 
       <ActivityFeed householdId={code} />
+
+      <Pressable onPress={onLeave} style={styles.leave}>
+        <Text style={styles.leaveLabel}>Leave home</Text>
+      </Pressable>
     </View>
   );
 }
@@ -232,48 +305,64 @@ const styles = StyleSheet.create({
   center: { paddingVertical: 24, alignItems: 'center' },
   block: { gap: 12, paddingVertical: 8 },
   inner: { gap: 10 },
-  title: { fontSize: 24, fontWeight: '700', color: '#111' },
-  eyebrow: { fontSize: 13, color: '#9b9b9b', textTransform: 'uppercase', letterSpacing: 1 },
-  homeName: { fontSize: 30, fontWeight: '700', color: '#111' },
-  sub: { fontSize: 15, color: '#666' },
+  title: { fontSize: 26, fontFamily: RoomieFonts.display, color: Roomie.ink },
+  eyebrow: {
+    fontSize: 12,
+    fontFamily: RoomieFonts.bodyBold,
+    color: Roomie.sub,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  homeName: { fontSize: 34, fontFamily: RoomieFonts.displayBold, color: Roomie.ink },
+  sub: { fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.sub },
   input: {
     borderWidth: 1,
-    borderColor: '#e2e2e2',
-    borderRadius: 12,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#111',
+    fontFamily: RoomieFonts.body,
+    color: Roomie.ink,
     marginTop: 4,
   },
   button: {
-    backgroundColor: '#111',
-    borderRadius: 12,
+    backgroundColor: Roomie.accent,
+    borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 4,
+    shadowColor: Roomie.accent,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonLabel: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonLabel: { color: Roomie.onAccent, fontSize: 16, fontFamily: RoomieFonts.bodyBold },
   link: { alignItems: 'center', paddingVertical: 10 },
-  linkLabel: { color: '#666', fontSize: 14 },
+  linkLabel: { color: Roomie.sub, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
   inviteBox: {
     marginTop: 12,
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: '#f5f5f5',
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: Roomie.card,
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
     gap: 6,
   },
-  inviteLabel: { fontSize: 12, color: '#9b9b9b' },
-  inviteCode: { fontSize: 13, color: '#111', fontWeight: '600' },
+  inviteLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
+  inviteCode: { fontSize: 13, color: Roomie.ink, fontFamily: RoomieFonts.bodyBold },
   copyButton: {
     marginTop: 8,
     alignSelf: 'flex-start',
-    backgroundColor: '#111',
-    borderRadius: 10,
+    backgroundColor: Roomie.ink,
+    borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 16,
   },
-  copyLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  error: { color: '#c0392b', fontSize: 14 },
+  copyLabel: { color: Roomie.canvas, fontSize: 14, fontFamily: RoomieFonts.bodyBold },
+  leave: { alignSelf: 'flex-start', paddingVertical: 8 },
+  leaveLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
+  error: { color: Roomie.danger, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
 });
