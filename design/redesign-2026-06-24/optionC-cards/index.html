@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Roomie — Playful Card-First</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --green:#1A6B43; --green-lt:#268A57; --pine:#15663F;
+    --coral:#FF6A3D; --pink:#FF4D8D; --gold:#FFCB2E; --teal:#07B6C7;
+    --ink:#0C2418; --sub:#5C7167; --canvas:#EAF5EE; --card:#FFFFFF; --line:#DDEEE4;
+    /* identity colors */
+    --kai:#FF6A3D;   /* coral */
+    --vfya:#FF4D8D;  /* pink */
+    --you:#1A6B43;   /* green */
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-font-smoothing:antialiased;}
+  body{
+    font-family:'Nunito',sans-serif; color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #d7f0e1 0%, transparent 60%),
+      radial-gradient(1000px 500px at 110% 10%, #ffe6dc 0%, transparent 55%),
+      #cfe7d8;
+    padding:48px 24px 80px;
+  }
+  .lab{
+    max-width:1760px; margin:0 auto 40px; text-align:center;
+  }
+  .lab h1{font-family:'Baloo 2'; font-weight:800; font-size:34px; color:var(--green); letter-spacing:-.5px;}
+  .lab p{color:#2f5d45; font-weight:700; margin-top:6px;}
+  .stage{
+    display:flex; gap:42px; flex-wrap:wrap; justify-content:center; align-items:flex-start;
+  }
+  .label{font-family:'Baloo 2'; font-weight:700; color:#2f5d45; text-align:center; margin-bottom:12px; font-size:16px;}
+
+  /* ---------- phone shell ---------- */
+  .phone{
+    width:390px; height:844px; background:var(--canvas);
+    border-radius:46px; position:relative; overflow:hidden;
+    box-shadow:0 40px 80px -20px rgba(8,40,24,.45), 0 0 0 11px #0c2418, 0 0 0 13px #20382c;
+    display:flex; flex-direction:column;
+  }
+  .notch{position:absolute; top:0; left:50%; transform:translateX(-50%); width:132px; height:30px; background:#0c2418; border-radius:0 0 18px 18px; z-index:60;}
+  .status{height:50px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:14px 28px 0; font-weight:800; font-size:14px; color:var(--ink); z-index:40;}
+  .status .dots{display:flex; gap:5px; align-items:center;}
+  .status .bar{width:18px; height:11px; border:2px solid var(--ink); border-radius:3px; position:relative;}
+  .status .bar::after{content:''; position:absolute; right:-3px; top:3px; width:2px; height:3px; background:var(--ink); border-radius:1px;}
+
+  /* ---------- top app bar ---------- */
+  .topbar{
+    flex:0 0 auto; padding:6px 18px 12px; display:flex; align-items:center; gap:12px; z-index:30;
+  }
+  .iconbtn{
+    width:46px; height:46px; border-radius:16px; background:var(--card);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 0 rgba(12,36,24,.06); flex:0 0 auto;
+  }
+  .iconbtn svg{width:22px; height:22px;}
+  .house{
+    flex:1; display:flex; align-items:center; gap:11px; background:var(--card);
+    border:1px solid var(--line); border-radius:16px; padding:7px 14px 7px 9px;
+    box-shadow:0 4px 0 rgba(12,36,24,.06);
+  }
+  .house .crest{width:32px; height:32px; border-radius:11px; background:linear-gradient(135deg,var(--green),var(--green-lt)); display:flex; align-items:center; justify-content:center; flex:0 0 auto;}
+  .house .crest svg{width:18px; height:18px; color:#fff;}
+  .house .nm{font-family:'Baloo 2'; font-weight:700; font-size:16px; line-height:1; color:var(--ink);}
+  .house .sub{font-size:11px; color:var(--sub); font-weight:700; margin-top:2px;}
+  .house .chev{margin-left:auto; color:var(--sub);}
+  .avbtn{position:relative;}
+  .avbtn .pic{width:46px; height:46px; border-radius:16px; background:linear-gradient(135deg,var(--you),#2fa86a); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Baloo 2'; font-weight:700; font-size:18px; border:2px solid #fff; box-shadow:0 4px 0 rgba(12,36,24,.10);}
+
+  /* ---------- scroll body ---------- */
+  .scroll{flex:1 1 auto; overflow-y:auto; padding:6px 18px 120px;}
+  .scroll::-webkit-scrollbar{display:none;}
+
+  .greet{padding:6px 4px 14px;}
+  .greet h2{font-family:'Baloo 2'; font-weight:800; font-size:27px; line-height:1.05; letter-spacing:-.4px;}
+  .greet h2 .wave{display:inline-block;}
+  .greet p{color:var(--sub); font-weight:700; font-size:14px; margin-top:3px;}
+
+  /* members row */
+  .members{display:flex; gap:9px; padding:2px 2px 16px;}
+  .mchip{display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:5px 13px 5px 5px; box-shadow:0 3px 0 rgba(12,36,24,.05);}
+  .mav{width:30px; height:30px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Baloo 2'; font-weight:700; font-size:14px;}
+  .mname{font-weight:800; font-size:13px;}
+  .mdot{width:8px; height:8px; border-radius:50%; margin-left:1px;}
+
+  /* ---------- BIG CARDS ---------- */
+  .card{border-radius:28px; padding:22px; margin-bottom:16px; position:relative; overflow:hidden; box-shadow:0 12px 24px -10px rgba(12,40,24,.22);}
+  .card.tap{cursor:pointer;}
+  .card .ktop{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .badge{display:inline-flex; align-items:center; gap:6px; font-family:'Baloo 2'; font-weight:700; font-size:12px; padding:5px 11px; border-radius:999px; letter-spacing:.2px;}
+  .card .arrow{margin-left:auto; width:34px; height:34px; border-radius:12px; display:flex; align-items:center; justify-content:center;}
+
+  /* hero money card */
+  .c-money{background:linear-gradient(150deg,var(--green) 0%, var(--pine) 70%, #114e30 100%); color:#fff;}
+  .c-money .deco{position:absolute; inset:0; opacity:.16; background-image:radial-gradient(circle at 85% 20%, #fff 0 2px, transparent 3px), radial-gradient(circle at 70% 80%, #fff 0 2px, transparent 3px), radial-gradient(circle at 30% 40%, #fff 0 1.5px, transparent 2.5px); background-size:60px 60px;}
+  .c-money .badge{background:rgba(255,255,255,.18); color:#fff;}
+  .c-money .arrow{background:rgba(255,255,255,.18); color:#fff;}
+  .c-money .lbl{font-weight:800; font-size:14px; opacity:.85; position:relative;}
+  .c-money .big{font-family:'Baloo 2'; font-weight:800; font-size:62px; line-height:1; margin:6px 0 4px; letter-spacing:-2px; position:relative;}
+  .c-money .who{display:flex; align-items:center; gap:9px; position:relative; margin-top:10px;}
+  .c-money .who .av{width:34px; height:34px; border-radius:50%; background:var(--pink); display:flex; align-items:center; justify-content:center; font-family:'Baloo 2'; font-weight:700; border:2px solid rgba(255,255,255,.6);}
+  .c-money .who span{font-weight:800; font-size:14px;}
+  .c-money .cta{margin-top:18px; display:flex; gap:10px; position:relative;}
+  .btn{flex:1; border:none; border-radius:16px; font-family:'Baloo 2'; font-weight:700; font-size:16px; padding:14px; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;}
+  .btn-gold{background:var(--gold); color:#3a2a00; box-shadow:0 5px 0 #d9a800;}
+  .btn-ghost{background:rgba(255,255,255,.16); color:#fff; flex:0 0 54px;}
+
+  /* generic colored chip card */
+  .c-white{background:var(--card); color:var(--ink);}
+  .c-white .badge.tasks{background:#fff0ec; color:var(--coral);}
+  .c-white .badge.kitchen{background:#e6faf2; color:var(--green);}
+  .card h3{font-family:'Baloo 2'; font-weight:700; font-size:20px; letter-spacing:-.3px;}
+  .card .arrow.dk{background:var(--canvas); color:var(--green);}
+
+  /* turn card */
+  .c-turn{background:linear-gradient(150deg,#FFF4DF,#FFE7D2); color:var(--ink);}
+  .c-turn .deco{position:absolute; right:-10px; bottom:-20px; font-size:120px; opacity:.18;}
+  .c-turn .badge{background:#fff; color:var(--coral);}
+  .c-turn .arrow{background:#fff; color:var(--coral);}
+  .turnrow{display:flex; align-items:center; gap:14px; position:relative; margin-top:4px;}
+  .turnrow .av{width:58px; height:58px; border-radius:20px; background:linear-gradient(135deg,var(--you),#2fa86a); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Baloo 2'; font-weight:800; font-size:26px; border:3px solid #fff; box-shadow:0 6px 0 rgba(12,40,24,.10);}
+  .turnrow .ttxt h3{font-size:22px;}
+  .turnrow .ttxt p{color:var(--sub); font-weight:700; font-size:14px; margin-top:2px;}
+  .turn-btn{margin-top:16px; width:100%; background:var(--coral); color:#fff; border:none; border-radius:16px; font-family:'Baloo 2'; font-weight:700; font-size:16px; padding:15px; box-shadow:0 5px 0 #d8501f; position:relative; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;}
+
+  /* kitchen mini */
+  .kgrid{display:flex; gap:12px; margin-bottom:16px;}
+  .ktile{flex:1; border-radius:24px; padding:18px; color:#fff; position:relative; overflow:hidden; box-shadow:0 10px 20px -8px rgba(12,40,24,.3); cursor:pointer;}
+  .ktile.buy{background:linear-gradient(150deg,var(--pink),#e23a73);}
+  .ktile.pantry{background:linear-gradient(150deg,var(--teal),#0593a1);}
+  .ktile .num{font-family:'Baloo 2'; font-weight:800; font-size:44px; line-height:1; letter-spacing:-1px;}
+  .ktile .cap{font-weight:800; font-size:14px; opacity:.9; margin-top:2px;}
+  .ktile .ic{position:absolute; right:12px; top:12px; opacity:.5;}
+  .ktile .items{font-size:12px; font-weight:700; opacity:.85; margin-top:10px; line-height:1.4;}
+
+  /* list inside cards */
+  .list{display:flex; flex-direction:column; gap:2px; margin-top:6px;}
+  .li{display:flex; align-items:center; gap:13px; padding:11px 4px; border-bottom:1px solid var(--line);}
+  .li:last-child{border-bottom:none;}
+  .li .lead{width:42px; height:42px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex:0 0 auto;}
+  .li .body{flex:1; min-width:0;}
+  .li .t1{font-family:'Baloo 2'; font-weight:700; font-size:16px; line-height:1.1;}
+  .li .t2{font-size:12.5px; color:var(--sub); font-weight:700; margin-top:2px;}
+  .li .trail{margin-left:auto; flex:0 0 auto; display:flex; align-items:center; gap:8px;}
+  .pill{font-family:'Baloo 2'; font-weight:700; font-size:14px; padding:4px 12px; border-radius:999px;}
+  .check{width:30px; height:30px; border-radius:50%; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; color:transparent;}
+  .check.done{background:var(--green); border-color:var(--green); color:#fff;}
+
+  /* section header inside scroll */
+  .sech{display:flex; align-items:center; justify-content:space-between; padding:18px 4px 10px;}
+  .sech h4{font-family:'Baloo 2'; font-weight:700; font-size:18px;}
+  .sech a{font-weight:800; font-size:13px; color:var(--green-lt); text-decoration:none;}
+
+  /* big page hero (money / kitchen / tasks screens) */
+  .phero{border-radius:28px; padding:24px; margin:4px 0 16px; color:#fff; position:relative; overflow:hidden; box-shadow:0 14px 26px -10px rgba(12,40,24,.35);}
+  .phero.green{background:linear-gradient(150deg,var(--green),var(--pine) 80%, #114e30);}
+  .phero .deco{position:absolute; inset:0; opacity:.14; background-image:radial-gradient(circle at 88% 22%, #fff 0 2px, transparent 3px), radial-gradient(circle at 60% 78%, #fff 0 2px, transparent 3px); background-size:54px 54px;}
+  .phero .lbl{font-weight:800; opacity:.85; position:relative; font-size:14px;}
+  .phero .big{font-family:'Baloo 2'; font-weight:800; font-size:54px; line-height:1; letter-spacing:-1.5px; margin:6px 0; position:relative;}
+  .segrow{display:flex; gap:14px; position:relative; margin-top:14px;}
+  .seg{flex:1; background:rgba(255,255,255,.14); border-radius:16px; padding:12px 14px;}
+  .seg .av{width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Baloo 2'; font-weight:700; font-size:13px; margin-bottom:8px;}
+  .seg .amt{font-family:'Baloo 2'; font-weight:800; font-size:22px; line-height:1;}
+  .seg .nm{font-size:12px; font-weight:700; opacity:.85; margin-top:2px;}
+
+  /* tabs (segmented) */
+  .tabs2{display:flex; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:5px; margin:2px 0 14px; box-shadow:0 4px 0 rgba(12,36,24,.05);}
+  .tabs2 button{flex:1; border:none; background:transparent; font-family:'Baloo 2'; font-weight:700; font-size:14px; color:var(--sub); padding:9px; border-radius:12px; cursor:pointer;}
+  .tabs2 button.on{background:var(--green); color:#fff;}
+
+  /* FAB */
+  .fab{position:absolute; right:20px; bottom:108px; width:60px; height:60px; border-radius:20px; background:var(--coral); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 0 #d8501f, 0 14px 24px -6px rgba(255,106,61,.6); z-index:35; cursor:pointer;}
+  .fab svg{width:28px; height:28px;}
+
+  /* bottom tab bar */
+  .tabbar{
+    position:absolute; bottom:0; left:0; right:0; height:90px; background:rgba(255,255,255,.92);
+    backdrop-filter:blur(12px); border-top:1px solid var(--line); display:flex; padding:10px 14px 22px; z-index:30;
+  }
+  .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--sub); font-weight:800; font-size:11px;}
+  .tab svg{width:25px; height:25px;}
+  .tab.on{color:var(--green);}
+  .tab.on .ti{background:#e6faf2;}
+  .ti{width:48px; height:32px; border-radius:14px; display:flex; align-items:center; justify-content:center;}
+
+  /* history timeline */
+  .tl{position:relative; padding-left:6px;}
+  .tlrow{display:flex; gap:13px; padding:9px 0;}
+  .tlrow .stem{display:flex; flex-direction:column; align-items:center;}
+  .tlrow .node{width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;}
+  .tlrow .line{flex:1; width:2px; background:var(--line); margin-top:4px;}
+  .tlrow:last-child .line{display:none;}
+  .tlrow .info{flex:1; padding-bottom:6px;}
+  .tlrow .info .a{font-family:'Baloo 2'; font-weight:700; font-size:15px;}
+  .tlrow .info .b{font-size:12.5px; color:var(--sub); font-weight:700; margin-top:1px;}
+  .tlrow .when{font-size:11.5px; color:var(--sub); font-weight:800; white-space:nowrap; padding-top:3px;}
+
+  .ic-sm{width:20px;height:20px;}
+</style>
+</head>
+<body>
+  <div class="lab">
+    <h1>Roomie — Playful Card-First</h1>
+    <p>big, tactile, joyful cards that fill the screen · deep-green led · BeReal / Duolingo / Cash App energy</p>
+  </div>
+
+  <div class="stage">
+
+  <!-- ============================= 1. HOME ============================= -->
+  <div>
+    <div class="label">1 · Home</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><div class="dots"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><span class="bar"></span></div></div>
+
+      <div class="topbar">
+        <button class="iconbtn" title="menu"><svg viewBox="0 0 24 24" fill="none" stroke="#1A6B43" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="house">
+          <div class="crest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>
+          <div><div class="nm">Pine Flat 4B</div><div class="sub">3 roommates · you're home</div></div>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <button class="avbtn"><span class="pic">S</span></button>
+      </div>
+
+      <div class="scroll">
+        <div class="greet">
+          <h2>Hey Sera <span class="wave">👋</span></h2>
+          <p>here's the house today</p>
+        </div>
+
+        <div class="members">
+          <div class="mchip"><span class="mav" style="background:var(--you)">S</span><span class="mname">You</span><span class="mdot" style="background:var(--you)"></span></div>
+          <div class="mchip"><span class="mav" style="background:var(--kai)">K</span><span class="mname">Kai</span><span class="mdot" style="background:var(--kai)"></span></div>
+          <div class="mchip"><span class="mav" style="background:var(--vfya)">V</span><span class="mname">Vfya</span><span class="mdot" style="background:var(--vfya)"></span></div>
+        </div>
+
+        <!-- HERO MONEY CARD -->
+        <div class="card c-money tap">
+          <div class="deco"></div>
+          <div class="ktop"><span class="badge">💰 you're owed</span><div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div></div>
+          <div class="lbl">across the house</div>
+          <div class="big">+€15</div>
+          <div class="who"><span class="av">V</span><span>Vfya owes you €15 · market run</span></div>
+          <div class="cta">
+            <button class="btn btn-gold">remind Vfya</button>
+            <button class="btn btn-ghost"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+          </div>
+        </div>
+
+        <!-- TURN CARD -->
+        <div class="card c-turn tap">
+          <div class="deco">🗑️</div>
+          <div class="ktop"><span class="badge">🧹 your turn</span><div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div></div>
+          <div class="turnrow">
+            <span class="av">S</span>
+            <div class="ttxt"><h3>Take out the trash</h3><p>it's on you today · Kai had it last</p></div>
+          </div>
+          <button class="turn-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg> mark it done</button>
+        </div>
+
+        <!-- KITCHEN MINI GRID -->
+        <div class="sech"><h4>Kitchen</h4><a href="#">open →</a></div>
+        <div class="kgrid">
+          <div class="ktile buy">
+            <svg class="ic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h2l2.4 12.5a2 2 0 0 0 2 1.5h7.7a2 2 0 0 0 2-1.6L21 7H5"/></svg>
+            <div class="num">2</div><div class="cap">to buy</div>
+            <div class="items">milk · coffee</div>
+          </div>
+          <div class="ktile pantry">
+            <svg class="ic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>
+            <div class="num">3</div><div class="cap">in pantry</div>
+            <div class="items">pasta · butter · onions</div>
+          </div>
+        </div>
+
+        <div style="height:8px"></div>
+      </div>
+
+      <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+
+      <div class="tabbar">
+        <div class="tab on"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>Home</div>
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Money</div>
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/></svg></div>Kitchen</div>
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>Tasks</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= 2. MONEY ============================= -->
+  <div>
+    <div class="label">2 · Money</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><div class="dots"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><span class="bar"></span></div></div>
+
+      <div class="topbar">
+        <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="#1A6B43" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="house">
+          <div class="crest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>
+          <div><div class="nm">Pine Flat 4B</div><div class="sub">Money</div></div>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <button class="avbtn"><span class="pic">S</span></button>
+      </div>
+
+      <div class="scroll">
+        <div class="greet"><h2>Money</h2><p>who owes whom, right now</p></div>
+
+        <!-- BIG BALANCE HERO -->
+        <div class="phero green">
+          <div class="deco"></div>
+          <div class="lbl">you're up overall</div>
+          <div class="big">+€15</div>
+          <div class="segrow">
+            <div class="seg">
+              <div class="av" style="background:var(--vfya)">V</div>
+              <div class="amt">€15</div><div class="nm">Vfya owes you</div>
+            </div>
+            <div class="seg">
+              <div class="av" style="background:var(--kai)">K</div>
+              <div class="amt">€0</div><div class="nm">Kai · settled</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs2"><button class="on">Balances</button><button>Activity</button></div>
+
+        <!-- balances list card -->
+        <div class="card c-white" style="padding:8px 18px;">
+          <div class="list">
+            <div class="li">
+              <span class="lead" style="background:#fff0ec"><span style="color:var(--vfya);font-family:'Baloo 2';font-weight:800">V</span></span>
+              <div class="body"><div class="t1">Vfya owes you</div><div class="t2">market run · split 50/50</div></div>
+              <div class="trail"><span class="pill" style="background:#e6faf2;color:var(--green)">€15</span></div>
+            </div>
+            <div class="li">
+              <span class="lead" style="background:#fff0ec"><span style="color:var(--kai);font-family:'Baloo 2';font-weight:800">K</span></span>
+              <div class="body"><div class="t1">Kai</div><div class="t2">all square with you</div></div>
+              <div class="trail"><span class="pill" style="background:var(--canvas);color:var(--sub)">€0</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- recent activity card -->
+        <div class="sech"><h4>Recent</h4><a href="#">all →</a></div>
+        <div class="card c-white" style="padding:8px 18px;">
+          <div class="list">
+            <div class="li">
+              <span class="lead" style="background:#e6faf2"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="#1A6B43" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h2l2.4 12.5a2 2 0 0 0 2 1.5h7.7a2 2 0 0 0 2-1.6L21 7H5"/></svg></span>
+              <div class="body"><div class="t1">Market run</div><div class="t2">you paid · split with Vfya</div></div>
+              <div class="trail"><span class="pill" style="background:var(--canvas);color:var(--ink)">€30</span></div>
+            </div>
+            <div class="li">
+              <span class="lead" style="background:#fff7e0"><svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="#d9a800" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+              <div class="body"><div class="t1">Kai settled up</div><div class="t2">paid you back · cash</div></div>
+              <div class="trail"><span class="pill" style="background:#e6faf2;color:var(--green)">+€12</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:8px"></div>
+      </div>
+
+      <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+
+      <div class="tabbar">
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>Home</div>
+        <div class="tab on"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Money</div>
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/></svg></div>Kitchen</div>
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>Tasks</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= 3. KITCHEN ============================= -->
+  <div>
+    <div class="label">3 · Kitchen</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><div class="dots"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><span class="bar"></span></div></div>
+
+      <div class="topbar">
+        <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="#1A6B43" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="house">
+          <div class="crest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>
+          <div><div class="nm">Pine Flat 4B</div><div class="sub">Kitchen</div></div>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <button class="avbtn"><span class="pic">S</span></button>
+      </div>
+
+      <div class="scroll">
+        <div class="greet"><h2>Kitchen</h2><p>what to grab, what we've got</p></div>
+
+        <div class="tabs2"><button class="on">Shopping</button><button>Pantry</button></div>
+
+        <!-- SHOPPING HERO -->
+        <div class="phero" style="background:linear-gradient(150deg,var(--pink),#e23a73);">
+          <div class="deco"></div>
+          <div class="lbl">on the list</div>
+          <div class="big">2 things</div>
+          <div style="position:relative;font-weight:800;opacity:.9;font-size:14px;">heading to the shop? grab these 👇</div>
+        </div>
+
+        <!-- shopping list card -->
+        <div class="card c-white" style="padding:8px 18px;">
+          <div class="list">
+            <div class="li">
+              <span class="lead" style="background:#fff0f5"><span style="font-size:22px">🥛</span></span>
+              <div class="body"><div class="t1">Milk</div><div class="t2">added by Kai · 2h ago</div></div>
+              <div class="trail"><div class="check"></div></div>
+            </div>
+            <div class="li">
+              <span class="lead" style="background:#fff0f5"><span style="font-size:22px">☕</span></span>
+              <div class="body"><div class="t1">Coffee</div><div class="t2">added by you · this morning</div></div>
+              <div class="trail"><div class="check"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-gold" style="width:100%;box-shadow:0 5px 0 #d9a800;margin-bottom:8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> add something</button>
+
+        <!-- PANTRY peek -->
+        <div class="sech"><h4>In the pantry</h4><a href="#">all →</a></div>
+        <div class="card c-white" style="padding:8px 18px;">
+          <div class="list">
+            <div class="li">
+              <span class="lead" style="background:#e6faf2"><span style="font-size:22px">🍝</span></span>
+              <div class="body"><div class="t1">Pasta</div><div class="t2">plenty</div></div>
+              <div class="trail"><span class="pill" style="background:#e6faf2;color:var(--green)">good</span></div>
+            </div>
+            <div class="li">
+              <span class="lead" style="background:#e6faf2"><span style="font-size:22px">🧈</span></span>
+              <div class="body"><div class="t1">Butter</div><div class="t2">half a block</div></div>
+              <div class="trail"><span class="pill" style="background:#fff7e0;color:#b8860b">low</span></div>
+            </div>
+            <div class="li">
+              <span class="lead" style="background:#e6faf2"><span style="font-size:22px">🧅</span></span>
+              <div class="body"><div class="t1">Onions</div><div class="t2">a few left</div></div>
+              <div class="trail"><span class="pill" style="background:#e6faf2;color:var(--green)">good</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:8px"></div>
+      </div>
+
+      <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+
+      <div class="tabbar">
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>Home</div>
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Money</div>
+        <div class="tab on"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/></svg></div>Kitchen</div>
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>Tasks</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= 4. TASKS ============================= -->
+  <div>
+    <div class="label">4 · Tasks</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><div class="dots"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg><span class="bar"></span></div></div>
+
+      <div class="topbar">
+        <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="#1A6B43" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="house">
+          <div class="crest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>
+          <div><div class="nm">Pine Flat 4B</div><div class="sub">Tasks</div></div>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <button class="avbtn"><span class="pic">S</span></button>
+      </div>
+
+      <div class="scroll">
+        <div class="greet"><h2>Tasks</h2><p>whose turn, and what's been done</p></div>
+
+        <!-- YOUR TURN HERO -->
+        <div class="card c-turn tap" style="margin-top:2px;">
+          <div class="deco">🗑️</div>
+          <div class="ktop"><span class="badge">🧹 your turn</span></div>
+          <div class="turnrow">
+            <span class="av">S</span>
+            <div class="ttxt"><h3>Take out the trash</h3><p>it's on you today · Kai had it last</p></div>
+          </div>
+          <button class="turn-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg> you did it</button>
+        </div>
+
+        <!-- UP NEXT -->
+        <div class="sech"><h4>Coming up</h4></div>
+        <div class="card c-white" style="padding:8px 18px;">
+          <div class="list">
+            <div class="li">
+              <span class="lead" style="background:#fff0ec"><span style="font-size:20px">🧽</span></span>
+              <div class="body"><div class="t1">Clean the kitchen</div><div class="t2">Vfya's turn next</div></div>
+              <div class="trail"><span class="mav" style="background:var(--vfya);width:30px;height:30px">V</span></div>
+            </div>
+            <div class="li">
+              <span class="lead" style="background:#fff0ec"><span style="font-size:20px">🚿</span></span>
+              <div class="body"><div class="t1">Bathroom</div><div class="t2">Kai's turn next</div></div>
+              <div class="trail"><span class="mav" style="background:var(--kai);width:30px;height:30px">K</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORY TIMELINE -->
+        <div class="sech"><h4>History</h4><a href="#">all →</a></div>
+        <div class="card c-white" style="padding:16px 18px;">
+          <div class="tl">
+            <div class="tlrow">
+              <div class="stem"><div class="node" style="background:var(--kai)">K</div><div class="line"></div></div>
+              <div class="info"><div class="a">Kai took out the trash</div><div class="b">moved on from it</div></div>
+              <div class="when">yesterday</div>
+            </div>
+            <div class="tlrow">
+              <div class="stem"><div class="node" style="background:var(--vfya)">V</div><div class="line"></div></div>
+              <div class="info"><div class="a">Vfya cleaned the kitchen</div><div class="b">you did it 🎉</div></div>
+              <div class="when">2 days ago</div>
+            </div>
+            <div class="tlrow">
+              <div class="stem"><div class="node" style="background:var(--you)">S</div><div class="line"></div></div>
+              <div class="info"><div class="a">You did the bathroom</div><div class="b">nice one</div></div>
+              <div class="when">4 days ago</div>
+            </div>
+            <div class="tlrow">
+              <div class="stem"><div class="node" style="background:var(--kai)">K</div></div>
+              <div class="info"><div class="a">Kai took out the trash</div><div class="b">moved on from it</div></div>
+              <div class="when">1 wk ago</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:8px"></div>
+      </div>
+
+      <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+
+      <div class="tabbar">
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>Home</div>
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Money</div>
+        <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/></svg></div>Kitchen</div>
+        <div class="tab on"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>Tasks</div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</body>
+</html>
