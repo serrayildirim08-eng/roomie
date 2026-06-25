@@ -53,6 +53,7 @@ export function MoneyScreen({ userId }: { userId: string }) {
   const [paidById, setPaidById] = useState<string | null>(null);
   const [pickedIds, setPickedIds] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [settling, setSettling] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   if (isLoading) {
@@ -87,7 +88,21 @@ export function MoneyScreen({ userId }: { userId: string }) {
       name: m.displayName ?? emailName(m.user?.email) ?? 'Someone',
     }))
     .filter((m) => m.userId);
-  const nameById = Object.fromEntries(members.map((m) => [m.userId, m.name]));
+  const nameById: Record<string, string> = Object.fromEntries(members.map((m) => [m.userId, m.name]));
+  // A roommate who has LEFT no longer has a membership row, but their money is
+  // still on the books. Learn a readable name for them from the user links on
+  // the expenses/settlements so their open balance isn't labelled "Someone".
+  const learnName = (u?: { id?: string; email?: string }) => {
+    if (u?.id && !nameById[u.id]) nameById[u.id] = emailName(u.email) ?? 'Past roommate';
+  };
+  household.expenses.forEach((e) => {
+    learnName(e.paidBy ?? undefined);
+    e.participants.forEach((p) => learnName(p));
+  });
+  household.settlements.forEach((s) => {
+    learnName(s.fromUser ?? undefined);
+    learnName(s.toUser ?? undefined);
+  });
   const myName = nameById[userId] ?? 'You';
 
   const expenses = household.expenses.map((e) => ({
@@ -180,20 +195,41 @@ export function MoneyScreen({ userId }: { userId: string }) {
     ]);
   };
 
-  const onSettle = async (fromId: string, toId: string, amountCents: number) => {
-    const settlementId = id();
-    await db.transact(
-      db.tx.settlements[settlementId]
-        .update({ amountCents, currency: 'EUR', createdAt: nowMs() })
-        .link({ household: household.id, fromUser: fromId, toUser: toId }),
-    );
-    await logActivity({
-      householdId: household.id,
-      actorId: fromId,
-      actorName: nameById[fromId] ?? 'Someone',
-      type: 'debt_settled',
-      metadata: { amountCents, toName: nameById[toId] ?? 'someone' },
-    });
+  // Only YOU can record that you paid someone back. The button is rendered just
+  // for your own debts, and the perm `settlements.create = isFromUser` enforces
+  // it server-side — a creditor can no longer forge a debtor's payment.
+  const onSettle = (toId: string, amountCents: number) => {
+    Alert.alert('Mark as paid?', `Record that you paid ${nameById[toId] ?? 'them'} ${formatEur(amountCents)}.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Yes, paid',
+        onPress: () => {
+          void (async () => {
+            if (settling) return;
+            setSettling(true);
+            try {
+              const settlementId = id();
+              await db.transact(
+                db.tx.settlements[settlementId]
+                  .update({ amountCents, currency: 'EUR', createdAt: nowMs() })
+                  .link({ household: household.id, fromUser: userId, toUser: toId }),
+              );
+              await logActivity({
+                householdId: household.id,
+                actorId: userId,
+                actorName: myName,
+                type: 'debt_settled',
+                metadata: { amountCents, toName: nameById[toId] ?? 'someone' },
+              });
+            } catch {
+              Alert.alert('Could not settle', 'Try again.');
+            } finally {
+              setSettling(false);
+            }
+          })();
+        },
+      },
+    ]);
   };
 
   return (
@@ -217,6 +253,7 @@ export function MoneyScreen({ userId }: { userId: string }) {
             keyboardType="decimal-pad"
             value={amount}
             onChangeText={setAmount}
+            maxLength={9}
           />
           <Text style={styles.pickerLabel}>Paid by</Text>
           <View style={styles.chipRow}>
@@ -282,12 +319,15 @@ export function MoneyScreen({ userId }: { userId: string }) {
               <View key={idx} style={styles.debtRow}>
                 <Text style={styles.debtText}>{label}</Text>
                 <Text style={styles.debtAmount}>{formatEur(d.amountCents)}</Text>
-                <Pressable
-                  style={styles.settle}
-                  onPress={() => onSettle(d.fromId, d.toId, d.amountCents)}
-                >
-                  <Text style={styles.settleLabel}>Settle</Text>
-                </Pressable>
+                {youPay ? (
+                  <Pressable
+                    style={[styles.settle, settling && styles.disabled]}
+                    onPress={() => onSettle(d.toId, d.amountCents)}
+                    disabled={settling}
+                  >
+                    <Text style={styles.settleLabel}>Settle</Text>
+                  </Pressable>
+                ) : null}
               </View>
             );
           })

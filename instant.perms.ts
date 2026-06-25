@@ -12,12 +12,14 @@
 // users: `auth.id in data.ref('household.memberships.user.id')`. This is the
 // same traversal the $users rule already relies on, so it's a proven path.
 //
+// Leaving a home DELETES the membership row (not a status flip), so access is
+// cut immediately — the row no longer satisfies any household check. Money math
+// no longer depends on the row surviving: it reconstructs a former member's
+// balance from the expense/settlement links, which point at $users directly.
+//
 // Known follow-ups (NOT covered here, tracked in docs/CHECKLIST.md):
 //   - Invite code == raw household UUID, so knowing an id is enough to self-
 //     join (membership create is self-only, but not invite-gated yet) — #34.
-//   - A `status:'removed'` member's membership row still satisfies the check
-//     until deleted, so they keep read access until truly removed — by design
-//     for now (money math needs removed members visible; see money bug fix).
 //
 // Push with:  npx instant-cli@latest push perms
 
@@ -67,20 +69,24 @@ const rules = {
     ],
   },
 
-  // Membership is the escalation vector: you may only create/leave YOUR OWN
-  // row; existing members may adjust rows within their household.
+  // Membership is the escalation vector. You may only create or edit YOUR OWN
+  // row (so nobody can flip someone else to 'owner' or kick them — F7). You may
+  // delete your own row (leave) and the household creator may delete anyone's
+  // (evict) — but a plain member can no longer evict the owner (F3).
   memberships: {
     allow: {
       view: 'isSelf || isMember',
       create: 'isSelf',
-      update: 'isSelf || isMember',
-      delete: 'isMember',
+      update: 'isSelf',
+      delete: 'isSelf || isHouseholdCreator',
     },
     bind: [
       'isSelf',
       "auth.id == data.ref('user.id')",
       'isMember',
       "auth.id in data.ref('household.memberships.user.id')",
+      'isHouseholdCreator',
+      "auth.id in data.ref('household.creator.id')",
     ],
   },
 
@@ -103,12 +109,15 @@ const rules = {
       delete: memberOfHousehold,
     },
   },
+  // A settlement is a claim "I paid you back", so only the PAYER (fromUser) may
+  // record or undo one — a creditor can't forge a debtor's payment (F4). Rows
+  // are otherwise immutable.
   settlements: {
     allow: {
       view: memberOfHousehold,
-      create: memberOfHousehold,
-      update: memberOfHousehold,
-      delete: memberOfHousehold,
+      create: "auth.id in data.ref('fromUser.id')",
+      update: 'false',
+      delete: "auth.id in data.ref('fromUser.id')",
     },
   },
 

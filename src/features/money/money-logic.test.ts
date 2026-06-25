@@ -63,15 +63,18 @@ describe('computeNetCents', () => {
     expect(net).toEqual({ a: 1000, b: 0, c: -1000 });
   });
 
-  it('ignores ids that are not members (removed users)', () => {
+  it('keeps a left roommate on the books so no money vanishes', () => {
+    // 'ghost' left the home (no membership row) but fronted €9 split three ways.
+    // Their €6 credit must survive, or the books stop summing to zero.
     const net = computeNetCents(
-      members.slice(0, 2),
+      members.slice(0, 2), // only a, b are still active
       [{ amountCents: 900, paidById: 'ghost', participantIds: ['a', 'b', 'ghost'] }],
       [],
     );
     expect(net.a).toBe(-300);
     expect(net.b).toBe(-300);
-    expect('ghost' in net).toBe(false);
+    expect(net.ghost).toBe(600); // fronted 900, own share 300
+    expect(net.a + net.b + net.ghost).toBe(0); // not a single cent lost
   });
 });
 
@@ -111,5 +114,15 @@ describe('parseAmountToCents', () => {
 
   it.each(['abc', '', '0', '-5', '12.345', '12,5,0'])('rejects %s', (input) => {
     expect(parseAmountToCents(input)).toBeNull();
+  });
+
+  it('rejects an absurd fat-finger amount over the ceiling', () => {
+    expect(parseAmountToCents('999999')).toBeNull(); // ~€1M
+    expect(parseAmountToCents('10000.01')).toBeNull(); // just over €10k
+  });
+
+  it('still accepts a large but real expense', () => {
+    expect(parseAmountToCents('2000')).toBe(200000); // €2000 rent share
+    expect(parseAmountToCents('10000')).toBe(1000000); // exactly the €10k ceiling
   });
 });

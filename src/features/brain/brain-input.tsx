@@ -6,8 +6,9 @@
 // Confirm; a failed brain is a shrug, never a guess.
 
 import { useAuth as useClerkAuth } from '@clerk/expo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Roomie, RoomieFonts } from '@/constants/theme';
 import { parseAmountToCents } from '@/features/money/money-logic';
@@ -17,6 +18,23 @@ import { BRAIN_URL, fragmentLine } from './types';
 import type { DraftFragment, DraftResponse } from './types';
 
 type Phase = 'idle' | 'thinking' | 'draft' | 'applying' | 'done' | 'error';
+
+// One-time disclosure before any text leaves the device for the AI.
+const AI_CONSENT_KEY = 'roomie:ai-consent';
+
+function askAiConsent(): Promise<boolean> {
+  return new Promise((resolve) =>
+    Alert.alert(
+      'Roomie uses AI',
+      'To sort what you type into the right place, Roomie sends this text to a third-party AI service. Your roommates don’t see it. OK to continue?',
+      [
+        { text: 'Not now', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'OK, continue', onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) },
+    ),
+  );
+}
 
 export function BrainInput({
   householdId,
@@ -46,6 +64,13 @@ export function BrainInput({
   const onSend = async () => {
     const note = text.trim();
     if (!note || phase === 'thinking') return;
+    // Gate the very first AI call on an explicit one-time consent.
+    const consented = await AsyncStorage.getItem(AI_CONSENT_KEY);
+    if (!consented) {
+      const ok = await askAiConsent();
+      if (!ok) return;
+      await AsyncStorage.setItem(AI_CONSENT_KEY, '1');
+    }
     setPhase('thinking');
     setAck([]);
     try {

@@ -164,22 +164,31 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
       setError('Paste the invite code.');
       return;
     }
+    if (!INVITE_CODE_SHAPE.test(trimmed)) {
+      setError('That doesn’t look like an invite code.');
+      return;
+    }
     setBusy(true);
     setError(null);
+    // Server perms hide a home from non-members (households.view = isMember), so
+    // we CANNOT read it before joining — a preflight query would always come
+    // back empty and the join would deadlock. Instead: join first, then confirm
+    // the home is real, and roll the membership back if the code was bogus.
+    const membershipId = id();
     try {
-      const { data } = await db.queryOnce({
-        households: { $: { where: { id: trimmed } } },
-      });
-      if (!data.households[0]) {
-        setError('No home found for that code.');
-        return;
-      }
-      const membershipId = id();
       await db.transact(
         db.tx.memberships[membershipId]
           .update({ role: 'member', status: 'active', displayName: userName, joinedAt: Date.now() })
           .link({ household: trimmed, user: userId }),
       );
+      const { data } = await db.queryOnce({
+        households: { $: { where: { id: trimmed } } },
+      });
+      if (!data.households[0]) {
+        await db.transact(db.tx.memberships[membershipId].delete());
+        setError('No home found for that code.');
+        return;
+      }
       await logActivity({
         householdId: trimmed,
         actorId: userId,
@@ -187,6 +196,12 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
         type: 'member_joined',
       });
     } catch {
+      // Best-effort rollback so a failed join leaves no orphan membership.
+      try {
+        await db.transact(db.tx.memberships[membershipId].delete());
+      } catch {
+        // ignore — nothing better we can do here
+      }
       setError('Could not join. Check the code and try again.');
     } finally {
       setBusy(false);
@@ -244,13 +259,22 @@ function HouseholdHome({
         style: 'destructive',
         onPress: () => {
           void (async () => {
-            await db.transact(db.tx.memberships[membershipId].update({ status: 'removed' }));
-            await logActivity({
-              householdId: code,
-              actorId: userId,
-              actorName: userName,
-              type: 'member_left',
-            });
+            try {
+              // Log BEFORE deleting the row — once it's gone we're no longer a
+              // member and the activity write would be denied by perms.
+              await logActivity({
+                householdId: code,
+                actorId: userId,
+                actorName: userName,
+                type: 'member_left',
+              });
+              // Delete (not status-flip) so read access is cut immediately. Any
+              // money this person fronted or owes still lives on the expense and
+              // settlement rows, so the books stay balanced.
+              await db.transact(db.tx.memberships[membershipId].delete());
+            } catch {
+              Alert.alert('Could not leave', 'Try again.');
+            }
           })();
         },
       },
