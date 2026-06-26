@@ -1,9 +1,9 @@
-// Home tab. Signed in via Clerk + bridged to InstantDB; this routes the user
-// into the household flow (create one, or see the one they're in).
+// Home tab. Signed in via Clerk + bridged to InstantDB; routes the user into the
+// household flow (create one, join one, or the green Home of the home they're in).
+// The Home view renders full-bleed so its forest hero reaches the top edge.
 
 import { useAuth, useUser } from '@clerk/expo';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Roomie, RoomieFonts } from '@/constants/theme';
 import { HouseholdGate } from '@/features/household/household';
@@ -14,32 +14,26 @@ export default function HomeScreen() {
   const { signOut } = useAuth();
   const { user: instantUser, isLoading: instantLoading } = db.useAuth();
 
+  if (instantLoading || !instantUser) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.note}>
+          {instantLoading ? 'Connecting…' : 'InstantDB not connected yet.'}
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.hello}>Hi {user?.username ?? 'there'} 👋</Text>
-
-        {instantLoading ? (
-          <Text style={styles.note}>Connecting…</Text>
-        ) : instantUser ? (
-          <HouseholdGate userId={instantUser.id} userName={user?.username ?? 'Someone'} />
-        ) : (
-          <Text style={styles.note}>InstantDB not connected yet.</Text>
-        )}
-
-        <Pressable style={styles.signout} onPress={() => signOut()}>
-          <Text style={styles.signoutLabel}>Sign out</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+    <HouseholdGate
+      userId={instantUser.id}
+      userName={user?.username ?? 'Someone'}
+      onSignOut={() => signOut()}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Roomie.canvas },
-  container: { paddingHorizontal: 28, paddingTop: 24, paddingBottom: 48, gap: 10 },
-  hello: { fontSize: 30, fontFamily: RoomieFonts.display, color: Roomie.ink },
-  note: { fontSize: 14, fontFamily: RoomieFonts.body, color: Roomie.sub, marginTop: 4 },
-  signout: { marginTop: 28, alignSelf: 'flex-start' },
-  signoutLabel: { fontSize: 15, color: Roomie.danger, fontFamily: RoomieFonts.bodySemi },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Roomie.canvas },
+  note: { fontSize: 14, fontFamily: RoomieFonts.body, color: Roomie.sub },
 });

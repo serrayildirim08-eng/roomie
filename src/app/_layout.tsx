@@ -2,7 +2,11 @@ import 'react-native-get-random-values'; // polyfill for InstantDB id generation
 
 import { ClerkProvider, Show } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
-import { Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
+import {
+  Baloo2_600SemiBold,
+  Baloo2_700Bold,
+  Baloo2_800ExtraBold,
+} from '@expo-google-fonts/baloo-2';
 import {
   Nunito_400Regular,
   Nunito_600SemiBold,
@@ -22,8 +26,9 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const [fontsLoaded] = useFonts({
-    Fraunces_600SemiBold,
-    Fraunces_700Bold,
+    Baloo2_600SemiBold,
+    Baloo2_700Bold,
+    Baloo2_800ExtraBold,
     Nunito_400Regular,
     Nunito_600SemiBold,
     Nunito_700Bold,

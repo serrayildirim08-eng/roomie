@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Roomie — Direction D · Editorial Header × Joyful Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --forest:#1A6B43;
+    --forest-2:#268A57;
+    --forest-ink:#0F3D27;
+    --coral:#FF6A3D;
+    --pink:#FF4D8D;
+    --gold:#FFCB2E;
+    --canvas:#F4F1EA;
+    --surface:#FFFFFF;
+    --ink:#16201B;
+    --ink-2:#566159;
+    --ink-3:#8A958F;
+    --rule:#E8E3D9;
+    /* one identity-color system (B's legible set) */
+    --you:#1A6B43;          /* You = forest */
+    --kai:#5B8DEF;          /* Kai = blue */
+    --vfya:#FF4D8D;         /* Vfya = pink */
+    --shadow:0 14px 30px -16px rgba(15,61,39,.30);
+    --shadow-sm:0 6px 16px -10px rgba(15,61,39,.34);
+    --drop-green:#114E30;   /* chunky button under-edge */
+    --drop-gold:#D9A800;
+    --drop-coral:#D8501F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  body{
+    font-family:'Nunito',system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 12% -8%, #d9efe1 0%, transparent 58%),
+      radial-gradient(1000px 520px at 108% 6%, #ffe7dd 0%, transparent 54%),
+      #d3e7da;
+    color:var(--ink);
+    padding:46px 24px 80px;
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+  }
+  .page-head{text-align:center;margin-bottom:12px;}
+  .page-head h1{font-family:'Baloo 2';font-weight:800;font-size:32px;color:var(--forest-ink);letter-spacing:-.01em;}
+  .page-head p{color:#2f5d45;font-weight:700;font-size:14px;margin-top:5px;letter-spacing:.01em;}
+  .frames{display:flex;flex-wrap:wrap;gap:42px;justify-content:center;align-items:flex-start;max-width:1820px;}
+  .frame-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .frame-label{font-family:'Baloo 2';font-weight:700;font-size:13px;color:var(--forest);text-transform:uppercase;letter-spacing:.16em;}
+
+  /* ===== PHONE ===== */
+  .phone{
+    width:390px;height:844px;background:var(--canvas);
+    border-radius:54px;position:relative;overflow:hidden;
+    box-shadow:0 50px 90px -40px rgba(15,61,39,.55), 0 0 0 11px #14241B, 0 0 0 13px #283C32;
+  }
+  .notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:118px;height:32px;background:#10201A;border-radius:20px;z-index:60;}
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:55;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 6px;font-size:14px;font-weight:800;color:#fff;}
+  .statusbar .dots{display:flex;gap:5px;align-items:center;}
+  .statusbar .bars{display:inline-flex;gap:2px;align-items:flex-end;height:11px;}
+  .statusbar .bars i{width:3px;background:currentColor;border-radius:1px;display:block;}
+  .statusbar .bars i:nth-child(1){height:5px}.statusbar .bars i:nth-child(2){height:7px}.statusbar .bars i:nth-child(3){height:9px}.statusbar .bars i:nth-child(4){height:11px}
+  .statusbar .batt{width:23px;height:12px;border:1.6px solid currentColor;border-radius:3px;position:relative;opacity:.95;}
+  .statusbar .batt:after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:6px;background:currentColor;border-radius:1px;}
+  .statusbar .batt:before{content:"";position:absolute;left:1.4px;top:1.4px;bottom:1.4px;width:70%;background:currentColor;border-radius:1px;}
+
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;}
+  .scroll{flex:1;overflow:hidden;position:relative;}
+
+  /* ===== HEADER ZONE (from B: editorial + context + hero stat) ===== */
+  .hero{
+    position:relative;color:#fff;padding:58px 22px 24px;
+    border-bottom-left-radius:34px;border-bottom-right-radius:34px;
+    background:linear-gradient(165deg,var(--forest-2) 0%, var(--forest) 52%, var(--forest-ink) 100%);
+    box-shadow:0 20px 38px -22px rgba(15,61,39,.72);
+  }
+  /* money-confetti texture borrowed from C, kept subtle */
+  .hero .confetti{position:absolute;inset:0;opacity:.16;pointer-events:none;
+    background-image:
+      radial-gradient(circle at 84% 22%, #fff 0 2px, transparent 3px),
+      radial-gradient(circle at 66% 80%, #fff 0 2px, transparent 3px),
+      radial-gradient(circle at 28% 44%, #FFCB2E 0 1.6px, transparent 2.6px),
+      radial-gradient(circle at 14% 14%, #fff 0 1.4px, transparent 2.4px);
+    background-size:88px 88px;
+    border-bottom-left-radius:34px;border-bottom-right-radius:34px;}
+
+  /* top app bar: hamburger + household switcher + profile */
+  .appbar{position:relative;z-index:3;display:flex;align-items:center;gap:11px;margin-bottom:18px;}
+  .iconbtn{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px);cursor:pointer;}
+  .iconbtn svg{width:21px;height:21px;}
+  .house-switch{flex:1;display:flex;align-items:center;gap:10px;min-width:0;
+    background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);border-radius:15px;padding:6px 12px 6px 7px;}
+  .house-switch .crest{width:32px;height:32px;border-radius:11px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#3fae72,#1c6e45);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35);}
+  .house-switch .crest svg{width:17px;height:17px;color:#fff;}
+  .house-switch .meta{min-width:0;}
+  .house-switch .meta .nm{font-family:'Baloo 2';font-weight:700;font-size:15.5px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .house-switch .meta .sub{font-size:10.5px;font-weight:700;opacity:.78;margin-top:1px;letter-spacing:.02em;}
+  .house-switch .chev{margin-left:auto;opacity:.8;flex:0 0 auto;}
+  .avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:700;color:#fff;flex:0 0 auto;}
+  .profile-av{width:42px;height:42px;border-radius:14px;font-size:17px;border:2px solid rgba(255,255,255,.55);box-shadow:0 4px 10px -4px rgba(0,0,0,.4);}
+  .av-you{background:linear-gradient(150deg,#2EA86A,#15613C);}
+  .av-kai{background:linear-gradient(150deg,#79A6F5,#3F6FD6);}
+  .av-vfya{background:linear-gradient(150deg,#FF7DB0,#E63B7C);}
+
+  .hero-body{position:relative;z-index:3;}
+  .hero-eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.82;}
+  .hero-title{font-family:'Baloo 2';font-weight:800;font-size:33px;line-height:1.05;letter-spacing:-.015em;margin-top:4px;}
+  .hero-sub{font-weight:700;font-size:13.5px;opacity:.9;margin-top:8px;line-height:1.4;}
+
+  /* member faces row (from B) */
+  .member-row{display:flex;align-items:center;gap:10px;margin-top:16px;}
+  .member-row .stack{display:flex;}
+  .member-row .stack .avatar{width:33px;height:33px;font-size:13px;margin-left:-9px;border:2px solid rgba(15,61,39,.25);box-shadow:0 0 0 2px rgba(255,255,255,.5);}
+  .member-row .stack .avatar:first-child{margin-left:0;}
+  .member-row .label{font-size:12.5px;font-weight:700;opacity:.92;}
+
+  /* hero number — C's oversized friendly number, living IN the header */
+  .hero-stat{position:relative;z-index:3;margin-top:16px;}
+  .hero-stat .amt{font-family:'Baloo 2';font-weight:800;font-size:56px;line-height:.96;letter-spacing:-.025em;}
+  .hero-stat .amt small{font-size:24px;font-weight:800;opacity:.8;letter-spacing:0;}
+  .hero-stat .cap{font-weight:700;font-size:13.5px;opacity:.92;margin-top:8px;display:flex;align-items:center;gap:8px;}
+  .pill-pos{background:var(--gold);color:#3a2e00;font-weight:800;font-size:11px;padding:3px 10px;border-radius:999px;letter-spacing:.02em;}
+
+  /* compact 3-up stat strip (when no single hero number) */
+  .stat-strip{position:relative;z-index:3;display:flex;gap:9px;margin-top:18px;}
+  .stat{flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);border-radius:16px;padding:11px 12px;}
+  .stat .k{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;opacity:.82;}
+  .stat .v{font-family:'Baloo 2';font-weight:800;font-size:24px;line-height:1.05;margin-top:3px;}
+  .stat .v small{font-size:12px;font-weight:700;opacity:.8;}
+  .stat .v.word{font-size:17px;padding-top:5px;}
+
+  /* ===== BODY ===== */
+  .body{padding:18px 18px 26px;display:flex;flex-direction:column;gap:16px;}
+  .section{display:flex;flex-direction:column;gap:11px;}
+  .sec-head{display:flex;align-items:center;justify-content:space-between;padding:0 3px;}
+  .sec-head h3{font-family:'Baloo 2';font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.01em;}
+  .sec-head .more{font-size:12.5px;font-weight:800;color:var(--forest);letter-spacing:.01em;}
+  .sec-head .count{font-size:11px;font-weight:800;color:var(--ink-3);background:#EFEBE1;padding:2px 9px;border-radius:999px;}
+  .daygroup{font-weight:800;font-size:11px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin:5px 3px 1px;}
+
+  /* segmented control (from B's discipline) */
+  .seg{display:flex;background:#EBE7DD;border-radius:15px;padding:4px;gap:3px;}
+  .seg button{flex:1;border:none;background:transparent;font-family:'Baloo 2';font-weight:700;font-size:13.5px;color:var(--ink-2);padding:9px 6px;border-radius:12px;cursor:pointer;}
+  .seg button.active{background:var(--surface);color:var(--forest-ink);box-shadow:var(--shadow-sm);}
+
+  /* filter chips */
+  .chips{display:flex;gap:8px;overflow:hidden;}
+  .chip{flex:0 0 auto;font-weight:800;font-size:12px;padding:7px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--rule);color:var(--ink-2);}
+  .chip.on{background:var(--forest);border-color:var(--forest);color:#fff;}
+
+  /* ===== CARDS (from C: big, tactile, rounded; resolved into modules) ===== */
+  .card{background:var(--surface);border-radius:24px;box-shadow:var(--shadow);border:1px solid #EFEBE1;overflow:hidden;}
+  .card.tap{cursor:pointer;}
+  .card.pad{padding:16px 18px;}
+
+  /* module card header (tappable surfaces, NOT competing heroes) */
+  .mod-head{display:flex;align-items:center;gap:11px;padding:15px 16px 12px;}
+  .mod-head .ic{width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .mod-head .ic svg{width:21px;height:21px;}
+  .mod-head .tt{flex:1;}
+  .mod-head .tt .t{font-family:'Baloo 2';font-weight:700;font-size:16.5px;color:var(--ink);line-height:1.1;}
+  .mod-head .tt .s{font-weight:700;font-size:12px;color:var(--ink-2);margin-top:2px;}
+  .mod-head .arrow{width:32px;height:32px;border-radius:11px;background:var(--canvas);color:var(--forest);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .mod-head .arrow svg{width:17px;height:17px;}
+
+  .row{display:flex;align-items:center;gap:13px;padding:13px 16px;border-top:1px solid var(--rule);}
+  .row .lead-ic{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;}
+  .row .lead-ic svg{width:21px;height:21px;}
+  .row .txt{flex:1;min-width:0;}
+  .row .txt .t{font-family:'Baloo 2';font-weight:700;font-size:15px;color:var(--ink);line-height:1.15;}
+  .row .txt .s{font-weight:700;font-size:12px;color:var(--ink-2);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .row .end{text-align:right;flex-shrink:0;}
+  .row .end .big{font-family:'Baloo 2';font-weight:800;font-size:19px;}
+  .row .end .small{font-size:11px;font-weight:700;color:var(--ink-3);margin-top:1px;}
+
+  .tag{font-size:10px;font-weight:800;padding:2px 8px;border-radius:7px;letter-spacing:.02em;}
+  .tag-you{background:rgba(26,107,67,.12);color:var(--forest);}
+  .tag-kai{background:rgba(91,141,239,.16);color:#3F6FD6;}
+  .tag-vfya{background:rgba(255,77,141,.14);color:#E63B7C;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+
+  .ic-soft-green{background:rgba(26,107,67,.1);color:var(--forest);}
+  .ic-soft-coral{background:rgba(255,106,61,.14);color:var(--coral);}
+  .ic-soft-gold{background:rgba(255,203,46,.2);color:#B98A00;}
+  .ic-soft-pink{background:rgba(255,77,141,.13);color:var(--pink);}
+  .ic-soft-blue{background:rgba(91,141,239,.16);color:#3F6FD6;}
+  .ic-soft-ink{background:#EEEAE0;color:var(--ink-2);}
+
+  /* CHUNKY drop-edge buttons (from C) — primary actions only */
+  .btn-chunky{display:flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;
+    font-family:'Baloo 2';font-weight:700;font-size:16px;padding:14px 18px;border-radius:16px;width:100%;}
+  .btn-green{background:linear-gradient(150deg,var(--forest-2),var(--forest));color:#fff;box-shadow:0 5px 0 var(--drop-green);}
+  .btn-gold{background:var(--gold);color:#3a2a00;box-shadow:0 5px 0 var(--drop-gold);}
+  .btn-coral{background:var(--coral);color:#fff;box-shadow:0 5px 0 var(--drop-coral);}
+  .btn-chunky svg{width:20px;height:20px;}
+
+  /* "your turn" spotlight — warm card, soft chore language */
+  .spotlight{position:relative;overflow:hidden;border-radius:24px;padding:20px 18px 18px;color:var(--ink);
+    background:linear-gradient(150deg,#FFF4DF,#FFE7D2);box-shadow:0 14px 28px -14px rgba(216,80,31,.4);}
+  .spotlight .deco{position:absolute;right:-8px;bottom:-24px;font-size:118px;opacity:.16;line-height:1;}
+  .spotlight .badge{position:relative;display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--coral);
+    font-family:'Baloo 2';font-weight:700;font-size:12px;padding:5px 12px;border-radius:999px;letter-spacing:.02em;}
+  .spotlight .turnrow{position:relative;display:flex;align-items:center;gap:14px;margin-top:14px;}
+  .spotlight .turnrow .av{width:56px;height:56px;border-radius:19px;font-size:24px;border:3px solid #fff;box-shadow:0 6px 0 rgba(216,80,31,.16);}
+  .spotlight .turnrow .ttxt h4{font-family:'Baloo 2';font-weight:800;font-size:22px;line-height:1.05;letter-spacing:-.01em;}
+  .spotlight .turnrow .ttxt p{color:var(--ink-2);font-weight:700;font-size:13px;margin-top:3px;}
+
+  /* checkable list item */
+  .check{width:28px;height:28px;border-radius:9px;border:2.5px solid var(--rule);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;}
+  .check.done{background:var(--forest);border-color:var(--forest);}
+  .check.done svg{width:15px;height:15px;color:#fff;}
+
+  /* status pill (pantry / low-stock) */
+  .spill{font-family:'Baloo 2';font-weight:700;font-size:12.5px;padding:4px 12px;border-radius:999px;}
+  .spill-good{background:#e6f4ec;color:var(--forest);}
+  .spill-low{background:rgba(255,106,61,.13);color:var(--coral);}
+
+  /* timeline / history (from B) */
+  .timeline{position:relative;}
+  .tl-item{display:flex;gap:13px;padding:9px 0;}
+  .tl-rail{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+  .tl-node{width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Baloo 2';font-weight:800;font-size:14px;}
+  .tl-line{flex:1;width:2px;background:var(--rule);margin-top:4px;}
+  .tl-item:last-child .tl-line{display:none;}
+  .tl-body{flex:1;padding-bottom:4px;}
+  .tl-body .t{font-family:'Baloo 2';font-weight:700;font-size:14.5px;color:var(--ink);line-height:1.15;}
+  .tl-body .s{font-weight:700;font-size:12px;color:var(--ink-2);margin-top:1px;}
+  .tl-when{font-weight:800;font-size:11px;color:var(--ink-3);white-space:nowrap;padding-top:3px;}
+
+  /* add-an-item inline */
+  .add-line{display:flex;align-items:center;gap:12px;padding:13px 16px;color:var(--ink-3);font-family:'Baloo 2';font-weight:700;font-size:14.5px;border-top:1px solid var(--rule);}
+  .add-line .plusc{width:30px;height:30px;border-radius:10px;border:2px dashed var(--rule);display:flex;align-items:center;justify-content:center;}
+  .add-line .plusc svg{width:16px;height:16px;}
+
+  /* ===== BOTTOM NAV ===== */
+  .tabbar{position:absolute;bottom:0;left:0;right:0;height:92px;background:rgba(255,255,255,.93);backdrop-filter:blur(18px);
+    border-top:1px solid var(--rule);display:flex;align-items:flex-start;justify-content:space-around;padding:11px 14px 0;z-index:50;}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--ink-3);font-weight:800;font-size:10.5px;letter-spacing:.02em;flex:1;}
+  .tab .ti{width:50px;height:30px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
+  .tab svg{width:24px;height:24px;}
+  .tab.active{color:var(--forest);}
+  .tab.active .ti{background:#e6f4ec;}
+  .home-ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:999px;background:var(--ink);opacity:.22;z-index:51;}
+
+  /* FAB — the ADD affordance is YELLOW/gold across every screen */
+  .fab{position:absolute;right:18px;bottom:108px;width:60px;height:60px;border-radius:20px;z-index:52;
+    background:linear-gradient(150deg,#FFD64A,var(--gold));color:#3a2a00;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 0 var(--drop-gold),0 16px 26px -10px rgba(216,168,0,.5),0 0 0 5px rgba(255,255,255,.6);}
+  .fab svg{width:28px;height:28px;}
+
+  /* hot-pink chunky button — distinct second primary (Money: settle/pay) */
+  .btn-pink{background:linear-gradient(150deg,#FF5C9C,#FF2E88);color:#fff;box-shadow:0 5px 0 #D11A66;}
+</style>
+</head>
+<body>
+  <div class="page-head">
+    <h1>Roomie — Direction D · Editorial Header × Joyful Cards</h1>
+    <p>the merge · B's bold header sets context + carries the hero · C's big tactile cards give the body life · forest palette · iPhone 390px</p>
+  </div>
+
+  <div class="frames">
+
+  <!-- ============================ 1. HOME ============================ -->
+  <div class="frame-wrap">
+    <div class="frame-label">1 · Home</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><div class="dots"><span class="bars"><i></i><i></i><i></i><i></i></span><span style="font-weight:800">5G</span><span class="batt"></span></div></div>
+      <div class="screen">
+        <div class="scroll">
+
+          <!-- HERO -->
+          <div class="hero">
+            <div class="confetti"></div>
+            <div class="appbar">
+              <div class="iconbtn" title="menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+              </div>
+              <div class="house-switch">
+                <div class="crest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>
+                <div class="meta"><div class="nm">Maple Flat 3</div><div class="sub">3 roommates · all home</div></div>
+                <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <div class="avatar profile-av av-you">S</div>
+            </div>
+
+            <div class="hero-body">
+              <div class="hero-eyebrow">Tuesday · 24 June</div>
+              <div class="hero-title">Good evening, Sera —<br>everything's calm.</div>
+              <div class="member-row">
+                <div class="stack">
+                  <div class="avatar av-you">S</div>
+                  <div class="avatar av-kai">K</div>
+                  <div class="avatar av-vfya">V</div>
+                </div>
+                <div class="label">You · Kai · Vfya — all home</div>
+              </div>
+            </div>
+
+            <div class="stat-strip">
+              <div class="stat"><div class="k">You're owed</div><div class="v">€15</div></div>
+              <div class="stat"><div class="k">To buy</div><div class="v">2<small> items</small></div></div>
+              <div class="stat"><div class="k">Your turn</div><div class="v word">Trash</div></div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body">
+
+            <!-- your turn spotlight -->
+            <div class="spotlight">
+              <div class="deco">🗑️</div>
+              <div class="badge">🧹 your turn · no rush</div>
+              <div class="turnrow">
+                <div class="avatar av-you">S</div>
+                <div class="ttxt">
+                  <h4>Take out the trash</h4>
+                  <p>it's on you today · Kai had it last, 5 days ago</p>
+                </div>
+              </div>
+              <button class="btn-chunky btn-coral" style="margin-top:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+                mark it done
+              </button>
+            </div>
+
+            <!-- money module -->
+            <div class="section">
+              <div class="card tap">
+                <div class="mod-head">
+                  <div class="ic ic-soft-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                  <div class="tt"><div class="t">Money</div><div class="s">you're owed €15 overall</div></div>
+                  <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+                </div>
+                <div class="row">
+                  <div class="avatar av-vfya" style="width:42px;height:42px;border-radius:14px;font-size:17px">V</div>
+                  <div class="txt"><div class="t">Vfya owes you</div><div class="s">from the €30 market run · today</div></div>
+                  <div class="end"><div class="big" style="color:var(--forest)">€15</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- house activity module -->
+            <div class="section">
+              <div class="sec-head"><h3>House activity</h3><span class="count">today</span></div>
+              <div class="card">
+                <div class="row" style="border-top:none">
+                  <div class="lead-ic ic-soft-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></div>
+                  <div class="txt"><div class="t">You added the market run</div><div class="s"><span class="tag tag-you">you</span> €30 · split 2 ways</div></div>
+                  <div class="end"><div class="small">2h ago</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                  <div class="txt"><div class="t">Kai cleaned the kitchen</div><div class="s"><span class="tag tag-kai">kai</span> chore done</div></div>
+                  <div class="end"><div class="small">Mon</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+                  <div class="txt"><div class="t">Vfya added “coffee” to buy</div><div class="s"><span class="tag tag-vfya">vfya</span> shopping list</div></div>
+                  <div class="end"><div class="small">Mon</div></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="tabbar">
+          <div class="tab active"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>Home</div>
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Money</div>
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg></div>Kitchen</div>
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>Tasks</div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ 2. MONEY ============================ -->
+  <div class="frame-wrap">
+    <div class="frame-label">2 · Money</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><div class="dots"><span class="bars"><i></i><i></i><i></i><i></i></span><span style="font-weight:800">5G</span><span class="batt"></span></div></div>
+      <div class="screen">
+        <div class="scroll">
+
+          <!-- HERO with the BIG money number -->
+          <div class="hero">
+            <div class="confetti"></div>
+            <div class="appbar">
+              <div class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+              <div class="house-switch">
+                <div class="crest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>
+                <div class="meta"><div class="nm">Maple Flat 3</div><div class="sub">Money</div></div>
+                <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <div class="avatar profile-av av-you">S</div>
+            </div>
+
+            <div class="hero-body">
+              <div class="hero-eyebrow">Your balance overall</div>
+              <div class="hero-stat">
+                <div class="amt">+€15<small>.00</small></div>
+                <div class="cap"><span class="pill-pos">you're owed</span> almost settled up</div>
+              </div>
+            </div>
+
+            <div class="stat-strip">
+              <div class="stat"><div class="k">Vfya owes you</div><div class="v">€15</div></div>
+              <div class="stat"><div class="k">You owe Kai</div><div class="v">€0</div></div>
+              <div class="stat"><div class="k">This month</div><div class="v">€30</div></div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body">
+
+            <!-- settle CTA — chunky button -->
+            <div class="card pad" style="display:flex;align-items:center;gap:13px;">
+              <div class="avatar av-vfya" style="width:46px;height:46px;border-radius:15px;font-size:18px">V</div>
+              <div style="flex:1"><div style="font-family:'Baloo 2';font-weight:700;font-size:15.5px">Vfya owes you €15</div><div style="font-weight:700;font-size:12px;color:var(--ink-2);margin-top:2px">tap to remind or mark settled</div></div>
+              <button class="btn-chunky btn-pink" style="width:auto;padding:11px 20px;font-size:14.5px">settle</button>
+            </div>
+
+            <!-- segmented control -->
+            <div class="seg">
+              <button class="active">Activity</button>
+              <button>Balances</button>
+              <button>Mine</button>
+            </div>
+
+            <!-- chips -->
+            <div class="chips">
+              <div class="chip on">All</div>
+              <div class="chip">Kitchen</div>
+              <div class="chip">Rent</div>
+              <div class="chip">Bills</div>
+            </div>
+
+            <!-- expense list, day-grouped -->
+            <div class="section">
+              <div class="daygroup">Today</div>
+              <div class="card">
+                <div class="row" style="border-top:none">
+                  <div class="lead-ic ic-soft-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></div>
+                  <div class="txt"><div class="t">Market run</div><div class="s"><span class="tag tag-you">you paid</span> split with Vfya</div></div>
+                  <div class="end"><div class="big">€30</div><div class="small" style="color:var(--forest)">+€15 to you</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2M5 11v11"/><path d="M19 2c-2 0-3 3-3 6s1 4 3 4v10"/></svg></div>
+                  <div class="txt"><div class="t">Coffee beans</div><div class="s"><span class="tag tag-vfya">vfya paid</span> split 3 ways</div></div>
+                  <div class="end"><div class="big">€12</div><div class="small">€4 each</div></div>
+                </div>
+              </div>
+
+              <div class="daygroup">This week</div>
+              <div class="card">
+                <div class="row" style="border-top:none">
+                  <div class="lead-ic ic-soft-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 3 14l2 6h14l2-6-2-1.5M12 3v9"/><circle cx="12" cy="6" r="2"/></svg></div>
+                  <div class="txt"><div class="t">Cleaning supplies</div><div class="s"><span class="tag tag-kai">kai paid</span> split 3 ways</div></div>
+                  <div class="end"><div class="big">€18</div><div class="small">settled</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-ink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M14 3v5h5"/></svg></div>
+                  <div class="txt"><div class="t">Internet bill</div><div class="s"><span class="tag tag-you">you paid</span> split 3 ways</div></div>
+                  <div class="end"><div class="big">€39</div><div class="small">settled</div></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="tabbar">
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>Home</div>
+          <div class="tab active"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Money</div>
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg></div>Kitchen</div>
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>Tasks</div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ 3. KITCHEN ============================ -->
+  <div class="frame-wrap">
+    <div class="frame-label">3 · Kitchen</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><div class="dots"><span class="bars"><i></i><i></i><i></i><i></i></span><span style="font-weight:800">5G</span><span class="batt"></span></div></div>
+      <div class="screen">
+        <div class="scroll">
+
+          <!-- HERO -->
+          <div class="hero">
+            <div class="confetti"></div>
+            <div class="appbar">
+              <div class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+              <div class="house-switch">
+                <div class="crest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>
+                <div class="meta"><div class="nm">Maple Flat 3</div><div class="sub">Kitchen</div></div>
+                <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <div class="avatar profile-av av-you">S</div>
+            </div>
+
+            <div class="hero-body">
+              <div class="hero-eyebrow">Kitchen · shopping</div>
+              <div class="hero-title">2 things to grab<br>on the next run.</div>
+              <div class="hero-sub">pantry's looking healthy — 3 staples stocked, 1 running low.</div>
+            </div>
+
+            <div class="stat-strip">
+              <div class="stat"><div class="k">To buy</div><div class="v">2<small> items</small></div></div>
+              <div class="stat"><div class="k">In pantry</div><div class="v">3</div></div>
+              <div class="stat"><div class="k">Running low</div><div class="v">1</div></div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body">
+
+            <div class="seg">
+              <button class="active">Shopping list</button>
+              <button>Pantry</button>
+            </div>
+
+            <!-- shopping list -->
+            <div class="section">
+              <div class="sec-head"><h3>To buy</h3><span class="count">2 items</span></div>
+              <div class="card">
+                <div class="row" style="border-top:none">
+                  <div class="check"></div>
+                  <div class="lead-ic" style="background:rgba(91,141,239,.12)">🥛</div>
+                  <div class="txt"><div class="t">Milk</div><div class="s"><span class="tag tag-you">added by you</span> 2 cartons</div></div>
+                </div>
+                <div class="row">
+                  <div class="check"></div>
+                  <div class="lead-ic" style="background:rgba(180,120,60,.13)">☕</div>
+                  <div class="txt"><div class="t">Coffee</div><div class="s"><span class="tag tag-vfya">added by Vfya</span> whichever's on offer</div></div>
+                </div>
+                <div class="add-line">
+                  <div class="plusc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+                  add an item…
+                </div>
+              </div>
+            </div>
+
+            <button class="btn-chunky btn-gold">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              add to shopping list
+            </button>
+
+            <!-- pantry -->
+            <div class="section">
+              <div class="sec-head"><h3>In the pantry</h3><span class="more">Manage ›</span></div>
+              <div class="card">
+                <div class="row" style="border-top:none">
+                  <div class="lead-ic ic-soft-green">🍝</div>
+                  <div class="txt"><div class="t">Pasta</div><div class="s">plenty · 4 packs</div></div>
+                  <div class="end"><span class="spill spill-good">good</span></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-gold">🧈</div>
+                  <div class="txt"><div class="t">Butter</div><div class="s">half a block left</div></div>
+                  <div class="end"><span class="spill spill-good">good</span></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-coral">🧅</div>
+                  <div class="txt"><div class="t">Onions</div><div class="s">running low · 2 left</div></div>
+                  <div class="end"><span class="spill spill-low">add to list</span></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="tabbar">
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>Home</div>
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Money</div>
+          <div class="tab active"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg></div>Kitchen</div>
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>Tasks</div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ 4. TASKS ============================ -->
+  <div class="frame-wrap">
+    <div class="frame-label">4 · Tasks</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><div class="dots"><span class="bars"><i></i><i></i><i></i><i></i></span><span style="font-weight:800">5G</span><span class="batt"></span></div></div>
+      <div class="screen">
+        <div class="scroll">
+
+          <!-- HERO -->
+          <div class="hero">
+            <div class="confetti"></div>
+            <div class="appbar">
+              <div class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+              <div class="house-switch">
+                <div class="crest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>
+                <div class="meta"><div class="nm">Maple Flat 3</div><div class="sub">Tasks · whose turn</div></div>
+                <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <div class="avatar profile-av av-you">S</div>
+            </div>
+
+            <div class="hero-body">
+              <div class="hero-eyebrow">Tasks · whose turn</div>
+              <div class="hero-title">It's your turn<br>for the trash.</div>
+              <div class="member-row">
+                <div class="stack">
+                  <div class="avatar av-you">S</div>
+                  <div class="avatar av-kai">K</div>
+                  <div class="avatar av-vfya">V</div>
+                </div>
+                <div class="label">shared fairly — taking turns, no scores</div>
+              </div>
+            </div>
+
+            <div class="stat-strip">
+              <div class="stat"><div class="k">Your turn</div><div class="v word">1 task</div></div>
+              <div class="stat"><div class="k">Up next</div><div class="v word">Kai</div></div>
+              <div class="stat"><div class="k">Done today</div><div class="v">1</div></div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body">
+
+            <!-- your turn spotlight -->
+            <div class="spotlight">
+              <div class="deco">🗑️</div>
+              <div class="badge">🧹 your turn · no rush</div>
+              <div class="turnrow">
+                <div class="avatar av-you">S</div>
+                <div class="ttxt">
+                  <h4>Take out the trash</h4>
+                  <p>comes around every few days · Kai did it last</p>
+                </div>
+              </div>
+              <button class="btn-chunky btn-coral" style="margin-top:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+                you did it
+              </button>
+            </div>
+
+            <!-- rota -->
+            <div class="section">
+              <div class="sec-head"><h3>The rota</h3><span class="more">Edit ›</span></div>
+              <div class="card">
+                <div class="row" style="border-top:none">
+                  <div class="lead-ic ic-soft-coral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
+                  <div class="txt"><div class="t">Trash</div><div class="s"><span class="dot" style="background:var(--you)"></span> your turn now</div></div>
+                  <div class="end"><div class="avatar av-you" style="width:32px;height:32px;font-size:13px">S</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2M5 11v11M19 2c-2 0-3 3-3 6s1 4 3 4v10"/></svg></div>
+                  <div class="txt"><div class="t">Kitchen clean</div><div class="s"><span class="dot" style="background:var(--kai)"></span> Kai's turn next</div></div>
+                  <div class="end"><div class="avatar av-kai" style="width:32px;height:32px;font-size:13px">K</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+                  <div class="txt"><div class="t">Bathroom</div><div class="s"><span class="dot" style="background:var(--vfya)"></span> Vfya · later this week</div></div>
+                  <div class="end"><div class="avatar av-vfya" style="width:32px;height:32px;font-size:13px">V</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- history timeline (chronological only) -->
+            <div class="section">
+              <div class="sec-head"><h3>History</h3><span class="count">recent</span></div>
+              <div class="card pad">
+                <div class="timeline">
+                  <div class="tl-item">
+                    <div class="tl-rail"><div class="tl-node av-kai">K</div><div class="tl-line"></div></div>
+                    <div class="tl-body"><div class="t">Kai cleaned the kitchen</div><div class="s">all tidy</div></div>
+                    <div class="tl-when">yesterday</div>
+                  </div>
+                  <div class="tl-item">
+                    <div class="tl-rail"><div class="tl-node av-vfya">V</div><div class="tl-line"></div></div>
+                    <div class="tl-body"><div class="t">Vfya did the bathroom</div><div class="s">sparkling</div></div>
+                    <div class="tl-when">Sun</div>
+                  </div>
+                  <div class="tl-item">
+                    <div class="tl-rail"><div class="tl-node av-you">S</div><div class="tl-line"></div></div>
+                    <div class="tl-body"><div class="t">You took out the trash</div><div class="s">last trash run</div></div>
+                    <div class="tl-when">5 days ago</div>
+                  </div>
+                  <div class="tl-item">
+                    <div class="tl-rail"><div class="tl-node av-kai">K</div></div>
+                    <div class="tl-body"><div class="t">Kai took out the trash</div><div class="s">moved on from it</div></div>
+                    <div class="tl-when">last week</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="tabbar">
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></div>Home</div>
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>Money</div>
+          <div class="tab"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg></div>Kitchen</div>
+          <div class="tab active"><div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>Tasks</div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</body>
+</html>

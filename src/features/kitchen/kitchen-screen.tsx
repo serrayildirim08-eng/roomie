@@ -20,8 +20,17 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  Card,
+  Hero,
+  HeroBar,
+  HeroEyebrow,
+  HeroTitle,
+  SectionHead,
+  StatStrip,
+} from '@/components/ui/kit';
 import { Roomie, RoomieFonts } from '@/constants/theme';
 import { logActivity } from '@/features/activity/activity';
 import { nowMs, parseAmountToCents } from '@/features/money/money-logic';
@@ -38,6 +47,7 @@ function emailName(email?: string): string | undefined {
 }
 
 export function KitchenScreen({ userId }: { userId: string }) {
+  const insets = useSafeAreaInsets();
   const { isLoading, error, data } = db.useQuery({
     memberships: {
       $: { where: { 'user.id': userId, status: 'active' } },
@@ -89,6 +99,14 @@ export function KitchenScreen({ userId }: { userId: string }) {
   const inPantry = items.filter((it) => it.status === 'in');
   const shopping = items.filter((it) => it.status === 'out');
   const now = nowMs();
+  const runningLow = inPantry.filter(
+    (it) => ageOf(Number(it.addedAt), it.shelfLifeDays ?? null, now) !== 'fresh',
+  ).length;
+  const kitchenStats = [
+    { k: 'To buy', v: String(shopping.length) },
+    { k: 'In pantry', v: String(inPantry.length) },
+    { k: 'Running low', v: String(runningLow) },
+  ];
 
   const onAdd = async () => {
     const typed = draft.trim();
@@ -234,113 +252,138 @@ export function KitchenScreen({ userId }: { userId: string }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Kitchen</Text>
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Hero topInset={insets.top}>
+          <HeroBar houseName={household.name} sub="Kitchen" you={myName} youSeed={userId} />
+          <HeroEyebrow>Kitchen · shopping</HeroEyebrow>
+          <HeroTitle>
+            {shopping.length === 0 ? 'Pantry’s stocked 🌿' : `${shopping.length} to grab next run`}
+          </HeroTitle>
+          <StatStrip stats={kitchenStats} />
+        </Hero>
 
-        <View style={styles.addRow}>
-          <TextInput
-            style={styles.input}
-            placeholder="Add something… (süt, coffee)"
-            placeholderTextColor={Roomie.sub}
-            value={draft}
-            onChangeText={setDraft}
-            onSubmitEditing={onAdd}
-            returnKeyType="done"
-          />
-          <Pressable style={styles.addButton} onPress={onAdd}>
-            <Text style={styles.addButtonLabel}>+</Text>
-          </Pressable>
-        </View>
-
-        {bridge ? (
-          <View style={styles.bridgeCard}>
-            <Text style={styles.bridgeTitle}>Add {bridge.itemName} to Money?</Text>
-            <View style={styles.bridgeRow}>
-              <TextInput
-                style={[styles.input, styles.bridgeInput]}
-                placeholder="€ (optional)"
-                placeholderTextColor={Roomie.sub}
-                keyboardType="decimal-pad"
-                value={bridgeAmount}
-                onChangeText={setBridgeAmount}
-                autoFocus
-              />
-              <Pressable style={styles.bridgeAdd} onPress={onBridgeConfirm}>
-                <Text style={styles.bridgeAddLabel}>Add</Text>
-              </Pressable>
-              <Pressable style={styles.bridgeSkip} onPress={() => setBridge(null)}>
-                <Text style={styles.bridgeSkipLabel}>Skip</Text>
-              </Pressable>
-            </View>
-            <Text style={styles.hint}>Split equally among {household.memberships.length}</Text>
+        <View style={styles.body}>
+          <View style={styles.addRow}>
+            <TextInput
+              style={styles.input}
+              placeholder="Add something… (süt, coffee)"
+              placeholderTextColor={Roomie.sub}
+              value={draft}
+              onChangeText={setDraft}
+              onSubmitEditing={onAdd}
+              returnKeyType="done"
+            />
+            <Pressable style={styles.addButton} onPress={onAdd}>
+              <Text style={styles.addButtonLabel}>+</Text>
+            </Pressable>
           </View>
-        ) : null}
 
-        <Text style={styles.section}>Shopping list</Text>
-        {shopping.length === 0 ? (
-          <Text style={styles.muted}>Nothing needed. 🌿</Text>
-        ) : (
-          shopping.map((it) => {
-            const claimerId = it.claimedBy?.id;
-            const mine = claimerId === userId;
-            return (
-              <View key={it.id} style={styles.row}>
-                <Text style={styles.rowEmoji}>{itemEmoji(it.name, it.category)}</Text>
-                <Text style={styles.rowName}>{it.name}</Text>
-                {claimerId && !mine ? (
-                  <Text style={styles.claimedNote}>{nameById[claimerId]} is getting it</Text>
-                ) : mine ? (
-                  <Pressable style={styles.gotIt} onPress={() => onGotIt(it.id, it.name, it.normalizedName)}>
-                    <Text style={styles.gotItLabel}>Got it ✓</Text>
-                  </Pressable>
-                ) : (
-                  <Pressable style={styles.claim} onPress={() => onClaim(it.id, it.name)}>
-                    <Text style={styles.claimLabel}>I&apos;ll get it</Text>
-                  </Pressable>
-                )}
-                <Pressable
-                  style={styles.delete}
-                  onPress={() => onDelete(it.id, it.name)}
-                  hitSlop={8}
-                  accessibilityLabel={`Remove ${it.name}`}
-                >
-                  <Text style={styles.deleteLabel}>✕</Text>
+          {bridge ? (
+            <Card pad style={styles.bridgeCard}>
+              <Text style={styles.bridgeTitle}>Add {bridge.itemName} to Money?</Text>
+              <View style={styles.bridgeRow}>
+                <TextInput
+                  style={[styles.input, styles.bridgeInput]}
+                  placeholder="€ (optional)"
+                  placeholderTextColor={Roomie.sub}
+                  keyboardType="decimal-pad"
+                  value={bridgeAmount}
+                  onChangeText={setBridgeAmount}
+                  maxLength={9}
+                  autoFocus
+                />
+                <Pressable style={styles.bridgeAdd} onPress={onBridgeConfirm}>
+                  <Text style={styles.bridgeAddLabel}>Add</Text>
+                </Pressable>
+                <Pressable style={styles.bridgeSkip} onPress={() => setBridge(null)}>
+                  <Text style={styles.bridgeSkipLabel}>Skip</Text>
                 </Pressable>
               </View>
-            );
-          })
-        )}
+              <Text style={styles.hint}>Split equally among {household.memberships.length}</Text>
+            </Card>
+          ) : null}
 
-        <Text style={styles.section}>In the pantry</Text>
-        {inPantry.length === 0 ? (
-          <Text style={styles.muted}>Pantry&apos;s bare. Add what&apos;s in the kitchen. 🫙</Text>
-        ) : (
-          inPantry.map((it) => {
-            const age = ageOf(Number(it.addedAt), it.shelfLifeDays ?? null, now);
-            const aging = age !== 'fresh';
-            return (
-              <View key={it.id} style={styles.row}>
-                <Text style={styles.rowEmoji}>{itemEmoji(it.name, it.category)}</Text>
-                <Text style={[styles.rowName, aging && styles.rowNameAging]}>{it.name}</Text>
-                {aging ? <View style={styles.agingDot} /> : null}
-                <Pressable style={styles.outButton} onPress={() => onOut(it.id, it.name)}>
-                  <Text style={styles.outLabel}>Out</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.delete}
-                  onPress={() => onDelete(it.id, it.name)}
-                  hitSlop={8}
-                  accessibilityLabel={`Remove ${it.name}`}
-                >
-                  <Text style={styles.deleteLabel}>✕</Text>
-                </Pressable>
-              </View>
-            );
-          })
-        )}
+          <View style={styles.section}>
+            <SectionHead title="Shopping list" />
+            {shopping.length === 0 ? (
+              <Card pad>
+                <Text style={styles.muted}>Nothing needed. 🌿</Text>
+              </Card>
+            ) : (
+              <Card>
+                {shopping.map((it, idx) => {
+                  const claimerId = it.claimedBy?.id;
+                  const mine = claimerId === userId;
+                  return (
+                    <View key={it.id} style={[styles.row, idx > 0 && styles.rowDivided]}>
+                      <Text style={styles.rowEmoji}>{itemEmoji(it.name, it.category)}</Text>
+                      <Text style={styles.rowName}>{it.name}</Text>
+                      {claimerId && !mine ? (
+                        <Text style={styles.claimedNote}>{nameById[claimerId]} is getting it</Text>
+                      ) : mine ? (
+                        <Pressable
+                          style={styles.gotIt}
+                          onPress={() => onGotIt(it.id, it.name, it.normalizedName)}
+                        >
+                          <Text style={styles.gotItLabel}>Got it ✓</Text>
+                        </Pressable>
+                      ) : (
+                        <Pressable style={styles.claim} onPress={() => onClaim(it.id, it.name)}>
+                          <Text style={styles.claimLabel}>I&apos;ll get it</Text>
+                        </Pressable>
+                      )}
+                      <Pressable
+                        style={styles.delete}
+                        onPress={() => onDelete(it.id, it.name)}
+                        hitSlop={8}
+                        accessibilityLabel={`Remove ${it.name}`}
+                      >
+                        <Text style={styles.deleteLabel}>✕</Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </Card>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <SectionHead title="In the pantry" />
+            {inPantry.length === 0 ? (
+              <Card pad>
+                <Text style={styles.muted}>Pantry&apos;s bare. Add what&apos;s in the kitchen. 🫙</Text>
+              </Card>
+            ) : (
+              <Card>
+                {inPantry.map((it, idx) => {
+                  const age = ageOf(Number(it.addedAt), it.shelfLifeDays ?? null, now);
+                  const aging = age !== 'fresh';
+                  return (
+                    <View key={it.id} style={[styles.row, idx > 0 && styles.rowDivided]}>
+                      <Text style={styles.rowEmoji}>{itemEmoji(it.name, it.category)}</Text>
+                      <Text style={[styles.rowName, aging && styles.rowNameAging]}>{it.name}</Text>
+                      {aging ? <View style={styles.agingDot} /> : null}
+                      <Pressable style={styles.outButton} onPress={() => onOut(it.id, it.name)}>
+                        <Text style={styles.outLabel}>Out</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.delete}
+                        onPress={() => onDelete(it.id, it.name)}
+                        hitSlop={8}
+                        accessibilityLabel={`Remove ${it.name}`}
+                      >
+                        <Text style={styles.deleteLabel}>✕</Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </Card>
+            )}
+          </View>
+        </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -355,8 +398,9 @@ function Centered({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Roomie.canvas },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { padding: 24, gap: 14 },
-  heading: { fontSize: 34, fontFamily: RoomieFonts.displayBold, color: Roomie.ink },
+  screen: { flex: 1, backgroundColor: Roomie.canvas },
+  scroll: { paddingBottom: 120 },
+  body: { padding: 18, gap: 16 },
   addRow: { flexDirection: 'row', gap: 8 },
   input: {
     flex: 1,
@@ -376,21 +420,10 @@ const styles = StyleSheet.create({
     width: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Roomie.accent,
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
   },
   addButtonLabel: { color: Roomie.onAccent, fontSize: 24, fontFamily: RoomieFonts.bodyBold },
-  bridgeCard: {
-    backgroundColor: Roomie.sageSoft,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Roomie.hairline,
-    padding: 14,
-    gap: 8,
-  },
-  bridgeTitle: { fontSize: 15, fontFamily: RoomieFonts.bodyBold, color: Roomie.ink },
+  bridgeCard: { gap: 8, backgroundColor: Roomie.sageSoft },
+  bridgeTitle: { fontSize: 15, fontFamily: RoomieFonts.display, color: Roomie.ink },
   bridgeRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   bridgeInput: { flex: 1 },
   bridgeAdd: {
@@ -403,20 +436,20 @@ const styles = StyleSheet.create({
   bridgeSkip: { paddingVertical: 12, paddingHorizontal: 6 },
   bridgeSkipLabel: { color: Roomie.sub, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
   hint: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.sub },
-  section: {
-    fontSize: 12,
-    fontFamily: RoomieFonts.bodyBold,
-    color: Roomie.sub,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginTop: 8,
-  },
+  section: { gap: 11 },
   muted: { fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.sub },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
-  rowEmoji: { fontSize: 16, width: 24 },
-  rowName: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+  },
+  rowDivided: { borderTopWidth: 1, borderTopColor: Roomie.rule },
+  rowEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
+  rowName: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.display, color: Roomie.ink },
   rowNameAging: { color: Roomie.sub },
-  agingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Roomie.hairline },
+  agingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Roomie.gold },
   outButton: {
     borderWidth: 1,
     borderColor: Roomie.hairline,
@@ -440,7 +473,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
   },
   gotItLabel: { color: Roomie.onAccent, fontSize: 13, fontFamily: RoomieFonts.bodyBold },
-  claimedNote: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.sage },
+  claimedNote: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sage },
   delete: { padding: 6 },
   deleteLabel: { fontSize: 15, color: Roomie.danger },
 });

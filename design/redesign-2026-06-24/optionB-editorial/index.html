@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Roomie — Editorial Header + Smart Density</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --forest:#1A6B43;
+    --forest-2:#268A57;
+    --forest-ink:#0F3D27;
+    --coral:#FF6A3D;
+    --pink:#FF4D8D;
+    --gold:#FFCB2E;
+    --canvas:#F4F1EA;       /* warm neutral page */
+    --surface:#FFFFFF;
+    --ink:#1B1F1D;
+    --ink-2:#5A6660;
+    --ink-3:#8A958F;
+    --rule:#E7E3DA;
+    --kai:#5B8DEF;          /* Kai identity blue */
+    --vfya:#FF4D8D;         /* Vfya identity pink */
+    --you:#1A6B43;          /* You = forest */
+    --shadow:0 10px 30px -12px rgba(15,61,39,.28);
+    --shadow-sm:0 4px 14px -8px rgba(15,61,39,.30);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  body{
+    font-family:'Nunito',system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #ECE7DB 0%, transparent 60%),
+      #E9E5DB;
+    color:var(--ink);
+    padding:48px 24px 80px;
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+  }
+  .page-head{text-align:center;margin-bottom:14px;}
+  .page-head h1{font-family:'Baloo 2';font-weight:800;font-size:30px;color:var(--forest-ink);letter-spacing:-.01em;}
+  .page-head p{color:var(--ink-2);font-weight:600;font-size:14px;margin-top:4px;letter-spacing:.02em;}
+  .frames{display:flex;flex-wrap:wrap;gap:40px;justify-content:center;align-items:flex-start;max-width:1820px;}
+  .frame-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .frame-label{font-family:'Baloo 2';font-weight:700;font-size:13px;color:var(--forest);text-transform:uppercase;letter-spacing:.14em;}
+
+  /* ===== PHONE ===== */
+  .phone{
+    width:390px;height:844px;background:var(--canvas);
+    border-radius:54px;position:relative;overflow:hidden;
+    box-shadow:0 50px 90px -40px rgba(15,61,39,.55), 0 0 0 11px #14241B, 0 0 0 13px #283C32;
+  }
+  .notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:118px;height:32px;background:#10201A;border-radius:20px;z-index:60;}
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:55;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 6px;font-size:14px;font-weight:800;color:#fff;}
+  .statusbar.ink{color:var(--ink);}
+  .statusbar .dots{display:flex;gap:5px;align-items:center;}
+  .statusbar .bars{display:inline-flex;gap:2px;align-items:flex-end;height:11px;}
+  .statusbar .bars i{width:3px;background:currentColor;border-radius:1px;display:block;}
+  .statusbar .bars i:nth-child(1){height:5px}.statusbar .bars i:nth-child(2){height:7px}.statusbar .bars i:nth-child(3){height:9px}.statusbar .bars i:nth-child(4){height:11px}
+  .statusbar .batt{width:23px;height:12px;border:1.6px solid currentColor;border-radius:3px;position:relative;opacity:.95;}
+  .statusbar .batt:after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:6px;background:currentColor;border-radius:1px;}
+  .statusbar .batt:before{content:"";position:absolute;left:1.4px;top:1.4px;bottom:1.4px;width:70%;background:currentColor;border-radius:1px;}
+
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;}
+  .scroll{flex:1;overflow:hidden;position:relative;}
+
+  /* ===== HEADER ZONE (the big idea) ===== */
+  .hero{
+    position:relative;color:#fff;padding:58px 22px 26px;
+    border-bottom-left-radius:30px;border-bottom-right-radius:30px;
+    box-shadow:0 18px 34px -22px rgba(15,61,39,.7);
+  }
+  .hero.green{background:linear-gradient(165deg,var(--forest-2) 0%, var(--forest) 52%, var(--forest-ink) 100%);}
+  .hero-grain{position:absolute;inset:0;opacity:.5;mix-blend-mode:soft-light;
+    background-image:radial-gradient(circle at 20% 20%, rgba(255,255,255,.5) 0, transparent 40%),
+    radial-gradient(circle at 85% 0%, rgba(255,203,46,.4) 0, transparent 45%);
+    border-bottom-left-radius:30px;border-bottom-right-radius:30px;pointer-events:none;}
+
+  /* top app bar */
+  .appbar{position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  .appbar .left{display:flex;align-items:center;gap:11px;}
+  .iconbtn{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px);cursor:pointer;}
+  .iconbtn svg{width:21px;height:21px;}
+  .house-id .eyebrow{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;opacity:.78;}
+  .house-id .name{font-family:'Baloo 2';font-weight:700;font-size:16px;line-height:1.05;display:flex;align-items:center;gap:5px;}
+  .house-id .name svg{width:13px;height:13px;opacity:.85;}
+  .avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-weight:700;font-size:14px;color:#fff;border:2px solid rgba(255,255,255,.55);box-shadow:0 4px 10px -4px rgba(0,0,0,.4);}
+  .av-you{background:linear-gradient(150deg,#2EA86A,#15613C);}
+  .av-kai{background:linear-gradient(150deg,#79A6F5,#3F6FD6);}
+  .av-vfya{background:linear-gradient(150deg,#FF7DB0,#E63B7C);}
+
+  .hero-body{position:relative;z-index:3;}
+  .hero-eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.82;}
+  .hero-title{font-family:'Baloo 2';font-weight:800;font-size:34px;line-height:1.04;letter-spacing:-.015em;margin-top:3px;}
+  .hero-sub{font-weight:600;font-size:14px;opacity:.88;margin-top:7px;line-height:1.4;}
+
+  .member-row{display:flex;align-items:center;gap:9px;margin-top:18px;}
+  .member-row .stack{display:flex;}
+  .member-row .stack .avatar{width:34px;height:34px;font-size:13px;margin-left:-9px;}
+  .member-row .stack .avatar:first-child{margin-left:0;}
+  .member-row .label{font-size:12.5px;font-weight:700;opacity:.9;}
+
+  /* hero stat strip */
+  .stat-strip{position:relative;z-index:3;display:flex;gap:10px;margin-top:20px;}
+  .stat{flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);border-radius:16px;padding:12px 13px;}
+  .stat .k{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.8;}
+  .stat .v{font-family:'Baloo 2';font-weight:800;font-size:21px;line-height:1.1;margin-top:3px;}
+  .stat .v small{font-size:12px;font-weight:700;opacity:.8;}
+
+  /* big single stat (money hero) */
+  .balance-hero{position:relative;z-index:3;margin-top:14px;}
+  .balance-hero .amt{font-family:'Baloo 2';font-weight:800;font-size:46px;line-height:1;letter-spacing:-.02em;}
+  .balance-hero .cap{font-weight:700;font-size:13.5px;opacity:.9;margin-top:6px;display:flex;align-items:center;gap:6px;}
+  .pill-pos{background:var(--gold);color:#3a2e00;font-weight:800;font-size:11px;padding:3px 9px;border-radius:999px;letter-spacing:.02em;}
+
+  /* ===== BODY ===== */
+  .body{padding:18px 18px 26px;display:flex;flex-direction:column;gap:18px;}
+  .section{display:flex;flex-direction:column;gap:11px;}
+  .sec-head{display:flex;align-items:center;justify-content:space-between;padding:0 2px;}
+  .sec-head h3{font-family:'Baloo 2';font-weight:700;font-size:16.5px;color:var(--ink);letter-spacing:-.01em;}
+  .sec-head .more{font-size:12.5px;font-weight:800;color:var(--forest);letter-spacing:.01em;}
+  .sec-head .count{font-size:11px;font-weight:800;color:var(--ink-3);background:#EFEBE1;padding:2px 8px;border-radius:999px;}
+
+  /* segmented control */
+  .seg{display:flex;background:#EBE7DD;border-radius:14px;padding:4px;gap:3px;}
+  .seg button{flex:1;border:none;background:transparent;font-family:'Nunito';font-weight:800;font-size:12.5px;color:var(--ink-2);padding:8px 6px;border-radius:11px;cursor:pointer;letter-spacing:.01em;}
+  .seg button.active{background:var(--surface);color:var(--forest-ink);box-shadow:var(--shadow-sm);}
+
+  /* filter chips */
+  .chips{display:flex;gap:8px;overflow:hidden;}
+  .chip{flex:0 0 auto;font-weight:800;font-size:12px;padding:7px 13px;border-radius:999px;background:var(--surface);border:1px solid var(--rule);color:var(--ink-2);}
+  .chip.on{background:var(--forest);border-color:var(--forest);color:#fff;}
+
+  /* cards */
+  .card{background:var(--surface);border-radius:18px;box-shadow:var(--shadow-sm);border:1px solid #F0ECE2;}
+  .card.pad{padding:15px 16px;}
+  .row{display:flex;align-items:center;gap:13px;padding:13px 16px;border-bottom:1px solid var(--rule);}
+  .row:last-child{border-bottom:none;}
+  .row .lead-ic{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .row .lead-ic svg{width:21px;height:21px;}
+  .row .txt{flex:1;min-width:0;}
+  .row .txt .t{font-weight:800;font-size:14.5px;color:var(--ink);line-height:1.2;}
+  .row .txt .s{font-weight:600;font-size:12px;color:var(--ink-2);margin-top:2px;display:flex;align-items:center;gap:6px;}
+  .row .end{text-align:right;flex-shrink:0;}
+  .row .end .big{font-family:'Baloo 2';font-weight:800;font-size:16px;}
+  .row .end .small{font-size:11px;font-weight:700;color:var(--ink-3);margin-top:1px;}
+
+  .tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.03em;}
+  .tag-you{background:rgba(26,107,67,.12);color:var(--forest);}
+  .tag-kai{background:rgba(91,141,239,.14);color:#3F6FD6;}
+  .tag-vfya{background:rgba(255,77,141,.14);color:#E63B7C;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+
+  .ic-soft-green{background:rgba(26,107,67,.1);color:var(--forest);}
+  .ic-soft-coral{background:rgba(255,106,61,.13);color:var(--coral);}
+  .ic-soft-gold{background:rgba(255,203,46,.18);color:#B98A00;}
+  .ic-soft-pink{background:rgba(255,77,141,.13);color:var(--pink);}
+  .ic-soft-blue{background:rgba(91,141,239,.14);color:#3F6FD6;}
+  .ic-soft-ink{background:#EEEAE0;color:var(--ink-2);}
+
+  /* spotlight 'your turn' card */
+  .spotlight{position:relative;overflow:hidden;border-radius:20px;padding:17px 17px 16px;color:#fff;
+    background:linear-gradient(135deg,#FF8A5C 0%, var(--coral) 60%, #F0552A 100%);box-shadow:0 14px 26px -14px rgba(240,85,42,.7);}
+  .spotlight .glow{position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.18);}
+  .spotlight .eyebrow{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.9;position:relative;}
+  .spotlight .big{font-family:'Baloo 2';font-weight:800;font-size:23px;margin-top:4px;position:relative;line-height:1.1;}
+  .spotlight .sub{font-weight:600;font-size:13px;opacity:.95;margin-top:5px;position:relative;}
+  .spotlight .act{position:relative;margin-top:14px;display:inline-flex;align-items:center;gap:7px;background:#fff;color:#E04E25;font-weight:800;font-size:13px;padding:9px 16px;border-radius:12px;box-shadow:0 6px 14px -6px rgba(0,0,0,.35);}
+  .spotlight .act svg{width:16px;height:16px;}
+
+  /* checkable list item (kitchen/tasks) */
+  .check{width:24px;height:24px;border-radius:8px;border:2px solid var(--rule);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .check.done{background:var(--forest);border-color:var(--forest);}
+  .check.done svg{width:14px;height:14px;color:#fff;}
+  .strike .t{text-decoration:line-through;color:var(--ink-3);}
+
+  /* progress bar */
+  .progress{height:8px;border-radius:999px;background:#EBE7DD;overflow:hidden;}
+  .progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--forest-2),var(--forest));}
+
+  /* mini pantry grid */
+  .pantry-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .pantry-cell{background:var(--surface);border:1px solid #F0ECE2;border-radius:16px;padding:13px 14px;box-shadow:var(--shadow-sm);}
+  .pantry-cell .emoji{font-size:22px;}
+  .pantry-cell .nm{font-weight:800;font-size:14px;margin-top:7px;color:var(--ink);}
+  .pantry-cell .qty{font-weight:700;font-size:11.5px;color:var(--ink-2);margin-top:2px;}
+  .pantry-cell .bar{margin-top:9px;}
+
+  /* timeline / history */
+  .timeline{position:relative;padding-left:6px;}
+  .tl-item{display:flex;gap:13px;padding:11px 2px;}
+  .tl-rail{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+  .tl-node{width:11px;height:11px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 2px var(--rule);margin-top:4px;}
+  .tl-line{flex:1;width:2px;background:var(--rule);margin-top:3px;}
+  .tl-item:last-child .tl-line{display:none;}
+  .tl-body .t{font-weight:800;font-size:13.5px;color:var(--ink);}
+  .tl-body .s{font-weight:600;font-size:11.5px;color:var(--ink-2);margin-top:1px;}
+  .tl-body .when{font-weight:700;font-size:10.5px;color:var(--ink-3);margin-top:3px;letter-spacing:.02em;}
+
+  .daygroup{font-weight:800;font-size:11px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin:4px 2px 2px;}
+
+  /* ===== BOTTOM NAV ===== */
+  .tabbar{position:absolute;bottom:0;left:0;right:0;height:92px;background:rgba(255,255,255,.92);backdrop-filter:blur(18px);
+    border-top:1px solid var(--rule);display:flex;align-items:flex-start;justify-content:space-around;padding:11px 14px 0;z-index:50;}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--ink-3);font-weight:800;font-size:10.5px;letter-spacing:.02em;flex:1;}
+  .tab svg{width:24px;height:24px;}
+  .tab.active{color:var(--forest);}
+  .home-ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:999px;background:var(--ink);opacity:.22;z-index:51;}
+
+  /* FAB */
+  .fab{position:absolute;right:18px;bottom:108px;width:60px;height:60px;border-radius:20px;z-index:52;
+    background:linear-gradient(150deg,var(--forest-2),var(--forest));color:#fff;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 16px 30px -12px rgba(15,61,39,.65),0 0 0 5px rgba(255,255,255,.55);}
+  .fab svg{width:28px;height:28px;}
+  .fab.coral{background:linear-gradient(150deg,#FF8A5C,var(--coral));box-shadow:0 16px 30px -12px rgba(240,85,42,.6),0 0 0 5px rgba(255,255,255,.55);}
+
+  /* settle bar (money) */
+  .settle{margin:0 0 4px;display:flex;align-items:center;gap:11px;background:#fff;border:1px solid #F0ECE2;border-radius:16px;padding:12px 14px;box-shadow:var(--shadow-sm);}
+  .settle .txt{flex:1;}
+  .settle .txt .t{font-weight:800;font-size:13.5px;}
+  .settle .txt .s{font-weight:600;font-size:11.5px;color:var(--ink-2);margin-top:1px;}
+  .settle .btn{background:var(--forest);color:#fff;font-weight:800;font-size:13px;padding:10px 16px;border-radius:12px;}
+
+  .add-line{display:flex;align-items:center;gap:11px;padding:12px 16px;color:var(--ink-3);font-weight:800;font-size:13.5px;}
+  .add-line .plusc{width:30px;height:30px;border-radius:10px;border:2px dashed var(--rule);display:flex;align-items:center;justify-content:center;}
+  .add-line .plusc svg{width:16px;height:16px;}
+</style>
+</head>
+<body>
+  <div class="page-head">
+    <h1>Roomie — Editorial Header + Smart Density</h1>
+    <p>Direction B · bold header zones + dense organized bodies · forest palette · iPhone 390px</p>
+  </div>
+
+  <div class="frames">
+
+  <!-- ============================ 1. HOME ============================ -->
+  <div class="frame-wrap">
+    <div class="frame-label">1 · Home</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><div class="dots"><span class="bars"><i></i><i></i><i></i><i></i></span><span style="font-weight:800">5G</span><span class="batt"></span></div></div>
+      <div class="screen">
+        <div class="scroll">
+
+          <!-- HERO -->
+          <div class="hero green">
+            <div class="hero-grain"></div>
+            <div class="appbar">
+              <div class="left">
+                <div class="iconbtn" title="menu">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                </div>
+                <div class="house-id">
+                  <div class="eyebrow">Household</div>
+                  <div class="name">Maple Flat 3
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="avatar av-you">Y</div>
+            </div>
+
+            <div class="hero-body">
+              <div class="hero-eyebrow">Tuesday · 24 June</div>
+              <div class="hero-title">Good evening,<br>everything's calm.</div>
+              <div class="member-row">
+                <div class="stack">
+                  <div class="avatar av-you">Y</div>
+                  <div class="avatar av-kai">K</div>
+                  <div class="avatar av-vfya">V</div>
+                </div>
+                <div class="label">You · Kai · Vfya — all home</div>
+              </div>
+            </div>
+
+            <div class="stat-strip">
+              <div class="stat"><div class="k">You're owed</div><div class="v">€15<small></small></div></div>
+              <div class="stat"><div class="k">To buy</div><div class="v">2<small> items</small></div></div>
+              <div class="stat"><div class="k">Your turn</div><div class="v" style="font-size:16px;padding-top:3px">Trash</div></div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body">
+
+            <!-- your turn spotlight -->
+            <div class="spotlight">
+              <div class="glow"></div>
+              <div class="eyebrow">Gentle reminder · your turn</div>
+              <div class="big">Take out the trash 🗑️</div>
+              <div class="sub">Last done by Kai, 5 days ago. No rush — whenever suits you.</div>
+              <div class="act">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                Mark as done
+              </div>
+            </div>
+
+            <!-- money snapshot -->
+            <div class="section">
+              <div class="sec-head"><h3>Money</h3><span class="more">Open ›</span></div>
+              <div class="settle">
+                <div class="avatar av-vfya" style="width:42px;height:42px;border-width:0">V</div>
+                <div class="txt"><div class="t">Vfya owes you</div><div class="s">From the €30 market run · today</div></div>
+                <div style="text-align:right"><div style="font-family:'Baloo 2';font-weight:800;font-size:20px;color:var(--forest)">€15</div></div>
+              </div>
+            </div>
+
+            <!-- house pulse -->
+            <div class="section">
+              <div class="sec-head"><h3>House activity</h3><span class="count">today</span></div>
+              <div class="card">
+                <div class="row">
+                  <div class="lead-ic ic-soft-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+                  <div class="txt"><div class="t">You added the market run</div><div class="s"><span class="tag tag-you">you</span> €30 · split 2 ways</div></div>
+                  <div class="end"><div class="small">2h ago</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                  <div class="txt"><div class="t">Kai cleaned the kitchen</div><div class="s"><span class="tag tag-kai">kai</span> chore done</div></div>
+                  <div class="end"><div class="small">Mon</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+                  <div class="txt"><div class="t">Vfya added “coffee” to buy</div><div class="s"><span class="tag tag-vfya">vfya</span> shopping list</div></div>
+                  <div class="end"><div class="small">Mon</div></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="tabbar">
+          <div class="tab active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home
+          </div>
+          <div class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.5-1-1.6-1.5-2.7-1.5-1.5 0-2.6 1-2.6 2.2 0 2.8 5.4 1.5 5.4 4.3 0 1.3-1.2 2.3-2.8 2.3-1.2 0-2.3-.6-2.8-1.6M12 6.5v11"/></svg>Money
+          </div>
+          <div class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2M5 11v11M9 2c0 3 1 5 1 7s-1 2-1 2v11"/><path d="M19 2c-2 0-3 3-3 6s1 4 3 4 0 0 0 0v10"/></svg>Kitchen
+          </div>
+          <div class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tasks
+          </div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ 2. MONEY ============================ -->
+  <div class="frame-wrap">
+    <div class="frame-label">2 · Money</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><div class="dots"><span class="bars"><i></i><i></i><i></i><i></i></span><span style="font-weight:800">5G</span><span class="batt"></span></div></div>
+      <div class="screen">
+        <div class="scroll">
+
+          <!-- HERO -->
+          <div class="hero green">
+            <div class="hero-grain"></div>
+            <div class="appbar">
+              <div class="left">
+                <div class="iconbtn" title="menu"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+                <div class="house-id"><div class="eyebrow">Household</div><div class="name">Maple Flat 3</div></div>
+              </div>
+              <div class="avatar av-you">Y</div>
+            </div>
+
+            <div class="hero-body">
+              <div class="hero-eyebrow">Your balance</div>
+              <div class="balance-hero">
+                <div class="amt">+€15.00</div>
+                <div class="cap"><span class="pill-pos">you're owed</span> settled up, almost</div>
+              </div>
+            </div>
+
+            <div class="stat-strip">
+              <div class="stat"><div class="k">Vfya owes you</div><div class="v">€15</div></div>
+              <div class="stat"><div class="k">You owe Kai</div><div class="v">€0</div></div>
+              <div class="stat"><div class="k">This month</div><div class="v">€30</div></div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body">
+
+            <!-- settle CTA -->
+            <div class="settle">
+              <div class="avatar av-vfya" style="width:42px;height:42px;border-width:0">V</div>
+              <div class="txt"><div class="t">Vfya owes you €15</div><div class="s">Tap to remind or mark settled</div></div>
+              <div class="btn">Settle</div>
+            </div>
+
+            <!-- segmented control -->
+            <div class="seg">
+              <button class="active">Activity</button>
+              <button>Balances</button>
+              <button>Mine</button>
+            </div>
+
+            <!-- chips -->
+            <div class="chips">
+              <div class="chip on">All</div>
+              <div class="chip">Kitchen</div>
+              <div class="chip">Rent</div>
+              <div class="chip">Bills</div>
+            </div>
+
+            <!-- expense list -->
+            <div class="section">
+              <div class="daygroup">Today</div>
+              <div class="card">
+                <div class="row">
+                  <div class="lead-ic ic-soft-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></div>
+                  <div class="txt"><div class="t">Market run</div><div class="s"><span class="tag tag-you">you paid</span> split with Vfya</div></div>
+                  <div class="end"><div class="big">€30</div><div class="small" style="color:var(--forest)">+€15 to you</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2M5 11v11"/><path d="M19 2c-2 0-3 3-3 6s1 4 3 4v10"/></svg></div>
+                  <div class="txt"><div class="t">Coffee beans</div><div class="s"><span class="tag tag-vfya">vfya paid</span> split 3 ways</div></div>
+                  <div class="end"><div class="big">€12</div><div class="small">€4 each</div></div>
+                </div>
+              </div>
+
+              <div class="daygroup">This week</div>
+              <div class="card">
+                <div class="row">
+                  <div class="lead-ic ic-soft-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 3 14l2 6h14l2-6-2-1.5M12 3v9"/><circle cx="12" cy="6" r="2"/></svg></div>
+                  <div class="txt"><div class="t">Cleaning supplies</div><div class="s"><span class="tag tag-kai">kai paid</span> split 3 ways</div></div>
+                  <div class="end"><div class="big">€18</div><div class="small">settled</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-ink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M14 3v5h5"/></svg></div>
+                  <div class="txt"><div class="t">Internet bill</div><div class="s"><span class="tag tag-you">you paid</span> split 3 ways</div></div>
+                  <div class="end"><div class="big">€39</div><div class="small">settled</div></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="tabbar">
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home</div>
+          <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.5-1-1.6-1.5-2.7-1.5-1.5 0-2.6 1-2.6 2.2 0 2.8 5.4 1.5 5.4 4.3 0 1.3-1.2 2.3-2.8 2.3-1.2 0-2.3-.6-2.8-1.6M12 6.5v11"/></svg>Money</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2M5 11v11M9 2c0 3 1 5 1 7s-1 2-1 2v11"/><path d="M19 2c-2 0-3 3-3 6s1 4 3 4 0 0 0 0v10"/></svg>Kitchen</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tasks</div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ 3. KITCHEN ============================ -->
+  <div class="frame-wrap">
+    <div class="frame-label">3 · Kitchen</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><div class="dots"><span class="bars"><i></i><i></i><i></i><i></i></span><span style="font-weight:800">5G</span><span class="batt"></span></div></div>
+      <div class="screen">
+        <div class="scroll">
+
+          <!-- HERO -->
+          <div class="hero green">
+            <div class="hero-grain"></div>
+            <div class="appbar">
+              <div class="left">
+                <div class="iconbtn" title="menu"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+                <div class="house-id"><div class="eyebrow">Household</div><div class="name">Maple Flat 3</div></div>
+              </div>
+              <div class="avatar av-you">Y</div>
+            </div>
+
+            <div class="hero-body">
+              <div class="hero-eyebrow">Kitchen</div>
+              <div class="hero-title">2 things to grab<br>on the next run.</div>
+              <div class="hero-sub">Pantry's looking healthy — 3 staples stocked.</div>
+            </div>
+
+            <div class="stat-strip">
+              <div class="stat"><div class="k">To buy</div><div class="v">2<small> items</small></div></div>
+              <div class="stat"><div class="k">In pantry</div><div class="v">3<small> staples</small></div></div>
+              <div class="stat"><div class="k">Running low</div><div class="v">1</div></div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body">
+
+            <div class="seg">
+              <button class="active">Shopping list</button>
+              <button>Pantry</button>
+            </div>
+
+            <!-- shopping list -->
+            <div class="section">
+              <div class="sec-head"><h3>To buy</h3><span class="count">2 items</span></div>
+              <div class="card">
+                <div class="row">
+                  <div class="check"></div>
+                  <div class="lead-ic" style="background:rgba(91,141,239,.12);width:36px;height:36px;border-radius:11px;font-size:18px;align-items:center;justify-content:center;display:flex">🥛</div>
+                  <div class="txt"><div class="t">Milk</div><div class="s"><span class="tag tag-you">added by you</span> 2 cartons</div></div>
+                </div>
+                <div class="row">
+                  <div class="check"></div>
+                  <div class="lead-ic" style="background:rgba(180,120,60,.12);width:36px;height:36px;border-radius:11px;font-size:18px;align-items:center;justify-content:center;display:flex">☕</div>
+                  <div class="txt"><div class="t">Coffee</div><div class="s"><span class="tag tag-vfya">added by Vfya</span> whichever's on offer</div></div>
+                </div>
+                <div class="add-line">
+                  <div class="plusc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+                  Add an item…
+                </div>
+              </div>
+            </div>
+
+            <!-- pantry grid -->
+            <div class="section">
+              <div class="sec-head"><h3>In the pantry</h3><span class="more">Manage ›</span></div>
+              <div class="pantry-grid">
+                <div class="pantry-cell">
+                  <div class="emoji">🍝</div>
+                  <div class="nm">Pasta</div><div class="qty">Plenty · 4 packs</div>
+                  <div class="bar progress"><i style="width:80%"></i></div>
+                </div>
+                <div class="pantry-cell">
+                  <div class="emoji">🧈</div>
+                  <div class="nm">Butter</div><div class="qty">Good · 1 block</div>
+                  <div class="bar progress"><i style="width:55%"></i></div>
+                </div>
+                <div class="pantry-cell" style="grid-column:span 2">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <div class="emoji">🧅</div>
+                    <div style="flex:1"><div class="nm">Onions</div><div class="qty">Running low · 2 left</div></div>
+                    <div class="tag" style="background:rgba(255,106,61,.13);color:var(--coral);font-size:11px;padding:5px 10px;border-radius:9px">Add to list</div>
+                  </div>
+                  <div class="bar progress" style="margin-top:10px"><i style="width:22%;background:linear-gradient(90deg,#FF8A5C,var(--coral))"></i></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="fab coral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="tabbar">
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.5-1-1.6-1.5-2.7-1.5-1.5 0-2.6 1-2.6 2.2 0 2.8 5.4 1.5 5.4 4.3 0 1.3-1.2 2.3-2.8 2.3-1.2 0-2.3-.6-2.8-1.6M12 6.5v11"/></svg>Money</div>
+          <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2M5 11v11M9 2c0 3 1 5 1 7s-1 2-1 2v11"/><path d="M19 2c-2 0-3 3-3 6s1 4 3 4 0 0 0 0v10"/></svg>Kitchen</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tasks</div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ 4. TASKS ============================ -->
+  <div class="frame-wrap">
+    <div class="frame-label">4 · Tasks</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><div class="dots"><span class="bars"><i></i><i></i><i></i><i></i></span><span style="font-weight:800">5G</span><span class="batt"></span></div></div>
+      <div class="screen">
+        <div class="scroll">
+
+          <!-- HERO -->
+          <div class="hero green">
+            <div class="hero-grain"></div>
+            <div class="appbar">
+              <div class="left">
+                <div class="iconbtn" title="menu"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+                <div class="house-id"><div class="eyebrow">Household</div><div class="name">Maple Flat 3</div></div>
+              </div>
+              <div class="avatar av-you">Y</div>
+            </div>
+
+            <div class="hero-body">
+              <div class="hero-eyebrow">Tasks · whose turn</div>
+              <div class="hero-title">It's your turn<br>for the trash.</div>
+              <div class="member-row">
+                <div class="stack">
+                  <div class="avatar av-you">Y</div>
+                  <div class="avatar av-kai">K</div>
+                  <div class="avatar av-vfya">V</div>
+                </div>
+                <div class="label">Shared fairly — taking turns, no scores</div>
+              </div>
+            </div>
+
+            <div class="stat-strip">
+              <div class="stat"><div class="k">Your turn</div><div class="v" style="font-size:16px;padding-top:3px">1 task</div></div>
+              <div class="stat"><div class="k">Up next</div><div class="v" style="font-size:16px;padding-top:3px">Kai</div></div>
+              <div class="stat"><div class="k">Done today</div><div class="v">1</div></div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body">
+
+            <!-- your turn spotlight -->
+            <div class="spotlight">
+              <div class="glow"></div>
+              <div class="eyebrow">Your turn · no rush</div>
+              <div class="big">Take out the trash 🗑️</div>
+              <div class="sub">Comes around every few days. Kai did it last.</div>
+              <div class="act">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                Mark done
+              </div>
+            </div>
+
+            <!-- rota -->
+            <div class="section">
+              <div class="sec-head"><h3>The rota</h3><span class="more">Edit ›</span></div>
+              <div class="card">
+                <div class="row">
+                  <div class="lead-ic ic-soft-coral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
+                  <div class="txt"><div class="t">Trash</div><div class="s"><span class="dot" style="background:var(--you)"></span> your turn now</div></div>
+                  <div class="end"><div class="avatar av-you" style="width:30px;height:30px;font-size:12px;border-width:0">Y</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2M5 11v11M19 2c-2 0-3 3-3 6s1 4 3 4v10"/></svg></div>
+                  <div class="txt"><div class="t">Kitchen clean</div><div class="s"><span class="dot" style="background:var(--kai)"></span> Kai's turn next</div></div>
+                  <div class="end"><div class="avatar av-kai" style="width:30px;height:30px;font-size:12px;border-width:0">K</div></div>
+                </div>
+                <div class="row">
+                  <div class="lead-ic ic-soft-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+                  <div class="txt"><div class="t">Bathroom</div><div class="s"><span class="dot" style="background:var(--vfya)"></span> Vfya · later this week</div></div>
+                  <div class="end"><div class="avatar av-vfya" style="width:30px;height:30px;font-size:12px;border-width:0">V</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- history timeline -->
+            <div class="section">
+              <div class="sec-head"><h3>History</h3><span class="count">recent</span></div>
+              <div class="card pad">
+                <div class="timeline">
+                  <div class="tl-item">
+                    <div class="tl-rail"><div class="tl-node" style="background:var(--kai)"></div><div class="tl-line"></div></div>
+                    <div class="tl-body"><div class="t">Kai cleaned the kitchen</div><div class="s">All tidy ✨</div><div class="when">Yesterday · 7:20 pm</div></div>
+                  </div>
+                  <div class="tl-item">
+                    <div class="tl-rail"><div class="tl-node" style="background:var(--vfya)"></div><div class="tl-line"></div></div>
+                    <div class="tl-body"><div class="t">Vfya did the bathroom</div><div class="s">Sparkling</div><div class="when">Sun · 11:05 am</div></div>
+                  </div>
+                  <div class="tl-item">
+                    <div class="tl-rail"><div class="tl-node" style="background:var(--you)"></div><div class="tl-line"></div></div>
+                    <div class="tl-body"><div class="t">You took out the trash</div><div class="s">Last trash run</div><div class="when">5 days ago</div></div>
+                  </div>
+                  <div class="tl-item">
+                    <div class="tl-rail"><div class="tl-node" style="background:var(--kai)"></div><div class="tl-line"></div></div>
+                    <div class="tl-body"><div class="t">Kai took out the trash</div><div class="s"></div><div class="when">Last week</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="tabbar">
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.5-1-1.6-1.5-2.7-1.5-1.5 0-2.6 1-2.6 2.2 0 2.8 5.4 1.5 5.4 4.3 0 1.3-1.2 2.3-2.8 2.3-1.2 0-2.3-.6-2.8-1.6M12 6.5v11"/></svg>Money</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2M5 11v11M9 2c0 3 1 5 1 7s-1 2-1 2v11"/><path d="M19 2c-2 0-3 3-3 6s1 4 3 4 0 0 0 0v10"/></svg>Kitchen</div>
+          <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tasks</div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</body>
+</html>

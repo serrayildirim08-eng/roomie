@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roomie — visual direction · 2026-06-24</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --canvas:#FBF7F0;        /* warm linen */
+    --canvas-deep:#F6EFE3;   /* a touch deeper, for the page gutter behind cards */
+    --card:#FFFCF6;          /* paper — LIFTED off canvas, was muddy oat before */
+    --card-warm:#F4EDE1;     /* oat — secondary surface */
+    --ink:#2D261F;           /* espresso */
+    --ink-soft:#6B5E50;      /* softer ink for secondary lines */
+    --sub:#A2937F;           /* warm gray label */
+    --hairline:#E7DCC9;      /* soft border */
+    --hairline-strong:#DBCDB4;
+    --accent:#C56C45;        /* terracotta */
+    --accent-deep:#A95730;
+    --accent-wash:#F6E5DA;   /* terracotta tint surface */
+    --sage:#6F7F5E;
+    --sage-wash:#EAEFE2;
+    --sky:#7C93A3;           /* quiet provenance blue-gray, used sparingly */
+    --shadow:24px 24px 60px rgba(75,55,30,.10);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:
+      radial-gradient(900px 500px at 12% -8%, #FFF6E9 0%, rgba(255,246,233,0) 60%),
+      radial-gradient(900px 600px at 105% 10%, #F4EFE6 0%, rgba(244,239,230,0) 55%),
+      var(--canvas-deep);
+    font-family:'Nunito',system-ui,sans-serif;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    padding:54px 30px 80px;
+  }
+
+  .pagehead{max-width:1740px;margin:0 auto 40px;padding-left:6px;}
+  .kicker{
+    font-family:'Nunito';font-weight:700;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--sub);margin:0 0 10px;
+  }
+  .pagehead h1{
+    font-family:'Fraunces';font-weight:600;font-size:40px;line-height:1.05;
+    margin:0 0 8px;color:var(--ink);letter-spacing:-.01em;
+  }
+  .pagehead p{
+    font-family:'Nunito';font-weight:500;font-size:15px;color:var(--ink-soft);
+    margin:0;max-width:640px;line-height:1.6;
+  }
+  .brassrule{
+    height:2px;width:120px;margin:18px 0 0;border-radius:2px;
+    background:linear-gradient(90deg,var(--accent) 0%,#E0B07F 55%,rgba(224,176,127,0) 100%);
+  }
+
+  .rail{
+    display:flex;gap:34px;justify-content:flex-start;flex-wrap:wrap;
+    max-width:1740px;margin:0 auto;
+  }
+
+  /* ---------- iPhone frame ---------- */
+  .phone{
+    width:390px;flex:0 0 390px;
+  }
+  .phone-label{
+    font-family:'Nunito';font-weight:700;font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--sub);margin:0 0 12px;padding-left:6px;
+  }
+  .screen{
+    position:relative;width:390px;height:820px;border-radius:46px;
+    background:var(--canvas);overflow:hidden;
+    border:1px solid var(--hairline-strong);
+    box-shadow:var(--shadow);
+  }
+  .notch{
+    position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:150px;height:30px;background:var(--ink);
+    border-bottom-left-radius:18px;border-bottom-right-radius:18px;z-index:40;
+  }
+  .statusbar{
+    position:absolute;top:0;left:0;right:0;height:54px;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 30px 0;font-family:'Nunito';font-weight:700;font-size:14px;color:var(--ink);
+  }
+  .statusbar .dots{font-size:12px;letter-spacing:.5px;opacity:.85;}
+
+  .body{
+    position:absolute;top:54px;left:0;right:0;bottom:74px;
+    overflow:hidden;padding:18px 22px 24px;
+  }
+
+  /* screen header block: serif + hairline, no lonely 34px */
+  .scr-kicker{
+    font-family:'Nunito';font-weight:700;font-size:10.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--sub);margin:6px 0 4px;
+  }
+  .scr-title{
+    font-family:'Fraunces';font-weight:600;font-size:30px;line-height:1.05;
+    margin:0 0 14px;color:var(--ink);letter-spacing:-.01em;
+  }
+  .scr-title .em{font-style:italic;font-weight:500;}
+  .topline{height:1px;background:var(--hairline);margin:0 0 18px;}
+
+  .section-label{
+    font-family:'Nunito';font-weight:700;font-size:10.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--sub);margin:22px 0 12px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .section-label::after{content:"";flex:1;height:1px;background:var(--hairline);}
+
+  /* ---------- cards ---------- */
+  .card{
+    background:var(--card);border:1px solid var(--hairline);
+    border-radius:22px;padding:18px;
+    box-shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 10px 24px rgba(80,58,30,.05);
+  }
+
+  /* ===== HOME ===== */
+  .greet{
+    font-family:'Fraunces';font-weight:600;font-size:32px;line-height:1.06;
+    margin:8px 0 2px;letter-spacing:-.01em;
+  }
+  .greet .name{color:var(--accent-deep);}
+  .greet-sub{font-family:'Nunito';font-weight:500;font-size:14px;color:var(--ink-soft);margin:0 0 18px;}
+
+  .brain{
+    background:var(--card);border:1px solid var(--hairline);border-radius:24px;
+    padding:20px 18px;margin-bottom:8px;position:relative;
+    box-shadow:0 10px 26px rgba(80,58,30,.06);
+  }
+  .brain::before{
+    /* the pinned-note corkboard tack */
+    content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);
+    width:13px;height:13px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #E89A6B, var(--accent-deep));
+    box-shadow:0 2px 4px rgba(120,60,20,.35);
+  }
+  .brain .brain-label{
+    font-family:'Nunito';font-weight:700;font-size:10.5px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--sub);margin:0 0 9px;
+  }
+  .brain .brain-ph{
+    font-family:'Fraunces';font-weight:500;font-style:italic;font-size:19px;
+    color:#B6A893;margin:0;
+  }
+  .brain .brain-cur{display:inline-block;width:1.5px;height:20px;background:var(--accent);
+    margin-left:3px;vertical-align:-3px;border-radius:1px;}
+
+  .feed-item{display:flex;gap:13px;padding:14px 4px;align-items:flex-start;border-bottom:1px solid var(--hairline);}
+  .feed-item:last-child{border-bottom:0;}
+  .avatar{
+    flex:0 0 32px;width:32px;height:32px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces';font-weight:600;font-size:14px;color:#fff;margin-top:1px;
+  }
+  .av-kai{background:linear-gradient(150deg,#C56C45,#A95730);}
+  .av-vfya{background:linear-gradient(150deg,#7E9166,#5E6F4D);}
+  .feed-text{font-family:'Nunito';font-weight:500;font-size:14.5px;color:var(--ink);line-height:1.45;}
+  .feed-text b{font-weight:700;}
+  .feed-time{font-family:'Nunito';font-weight:600;font-size:12px;color:var(--sub);margin-top:3px;}
+
+  /* ===== MONEY ===== */
+  .balance{
+    background:linear-gradient(155deg,#FFFCF6 0%,#F8EFE2 100%);
+    border:1px solid var(--hairline);border-radius:24px;padding:22px 20px;
+    box-shadow:0 10px 26px rgba(80,58,30,.06);margin-bottom:6px;
+  }
+  .balance .bl{font-family:'Nunito';font-weight:700;font-size:10.5px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--sub);margin:0 0 8px;}
+  .balance .amt{font-family:'Fraunces';font-weight:600;font-size:38px;line-height:1;color:var(--ink);margin:0;}
+  .balance .amt .cur{font-size:24px;color:var(--ink-soft);vertical-align:6px;margin-right:2px;}
+  .balance .who{font-family:'Nunito';font-weight:600;font-size:14px;color:var(--ink-soft);margin:8px 0 0;}
+  .balance .who b{color:var(--accent-deep);font-weight:700;}
+  .settle-btn{
+    margin-top:16px;display:inline-block;width:100%;text-align:center;
+    background:var(--sage);color:#fff;font-family:'Nunito';font-weight:700;font-size:14px;
+    padding:13px;border-radius:15px;letter-spacing:.01em;
+  }
+
+  .exp-row{display:flex;align-items:center;gap:13px;padding:14px 4px;border-bottom:1px solid var(--hairline);}
+  .exp-row:last-child{border-bottom:0;}
+  .exp-ic{
+    flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:var(--card-warm);
+    border:1px solid var(--hairline);display:flex;align-items:center;justify-content:center;color:var(--ink-soft);
+  }
+  .exp-main{flex:1;}
+  .exp-title{font-family:'Nunito';font-weight:700;font-size:15px;color:var(--ink);}
+  .exp-meta{font-family:'Nunito';font-weight:500;font-size:12.5px;color:var(--sub);margin-top:1px;}
+  .exp-amt{font-family:'Fraunces';font-weight:600;font-size:17px;color:var(--ink);}
+
+  /* ===== KITCHEN ===== */
+  .addfield{
+    display:flex;align-items:center;gap:10px;background:var(--card);
+    border:1px solid var(--hairline);border-radius:18px;padding:13px 14px;margin-bottom:6px;
+  }
+  .addfield .ph{flex:1;font-family:'Nunito';font-weight:500;font-size:15px;color:#B6A893;}
+  .addfield .plus{
+    flex:0 0 34px;width:34px;height:34px;border-radius:11px;background:var(--accent);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;font-family:'Nunito';
+  }
+
+  .k-row{display:flex;align-items:center;gap:13px;padding:13px 4px;border-bottom:1px solid var(--hairline);}
+  .k-row:last-child{border-bottom:0;}
+  .k-ic{flex:0 0 30px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+    color:var(--ink-soft);}
+  .k-name{flex:1;font-family:'Nunito';font-weight:700;font-size:15.5px;color:var(--ink);}
+  .k-name.aging{color:var(--sub);font-weight:600;}
+  .agingdot{width:6px;height:6px;border-radius:50%;background:var(--hairline-strong);}
+  .pill{
+    font-family:'Nunito';font-weight:700;font-size:12.5px;padding:7px 13px;border-radius:12px;
+  }
+  .pill-claim{background:var(--accent);color:#fff;}
+  .pill-out{background:var(--card-warm);border:1px solid var(--hairline);color:var(--ink);}
+  .pill-got{background:var(--sage);color:#fff;}
+  .claim-note{font-family:'Nunito';font-weight:600;font-size:13px;color:var(--sage);}
+
+  /* ===== TASKS ===== */
+  .chore{
+    background:var(--card);border:1px solid var(--hairline);border-radius:20px;
+    padding:15px 16px;margin-bottom:11px;box-shadow:0 6px 16px rgba(80,58,30,.04);
+  }
+  .chore-top{display:flex;align-items:center;gap:11px;}
+  .chore-name{flex:1;font-family:'Fraunces';font-weight:600;font-size:18px;color:var(--ink);}
+  .turn{font-family:'Nunito';font-weight:700;font-size:11.5px;letter-spacing:.04em;
+    padding:6px 12px;border-radius:999px;}
+  .turn-mine{background:var(--accent);color:#fff;}
+  .turn-other{background:var(--card-warm);border:1px solid var(--hairline);color:var(--sub);}
+  .chore-actions{display:flex;gap:8px;margin-top:13px;}
+  .act{font-family:'Nunito';font-weight:700;font-size:13px;padding:9px 16px;border-radius:13px;flex:1;text-align:center;}
+  .act-done{background:var(--sage);color:#fff;}
+  .act-pass{background:transparent;border:1px solid var(--hairline-strong);color:var(--ink-soft);}
+  .chore-hist{margin-top:13px;padding-top:12px;border-top:1px solid var(--hairline);}
+  .hist-row{display:flex;justify-content:space-between;padding:4px 0;}
+  .hist-txt{font-family:'Nunito';font-weight:500;font-size:13px;color:var(--ink-soft);}
+  .hist-txt b{font-weight:700;color:var(--ink);}
+  .hist-time{font-family:'Nunito';font-weight:600;font-size:12px;color:var(--sub);}
+
+  .mine-row{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--hairline);}
+  .mine-check{flex:0 0 22px;width:22px;height:22px;border-radius:7px;border:1.5px solid var(--hairline-strong);}
+  .mine-title{flex:1;font-family:'Nunito';font-weight:600;font-size:15px;color:var(--ink);}
+
+  .quiet{
+    font-family:'Fraunces';font-weight:500;font-style:italic;font-size:16px;color:var(--sub);
+    padding:14px 4px;display:flex;align-items:center;gap:10px;
+  }
+  .dinkus{font-family:'Fraunces';color:var(--hairline-strong);font-size:18px;}
+
+  /* ---------- bottom tab bar ---------- */
+  .tabbar{
+    position:absolute;left:0;right:0;bottom:0;height:74px;z-index:30;
+    background:rgba(251,247,240,.92);backdrop-filter:blur(12px);
+    border-top:1px solid var(--hairline);
+    display:flex;align-items:flex-start;justify-content:space-around;padding:11px 18px 0;
+  }
+  .tab{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--sub);}
+  .tab.active{color:var(--accent-deep);}
+  .tab .ti{width:24px;height:24px;}
+  .tab .tl{font-family:'Nunito';font-weight:700;font-size:10.5px;letter-spacing:.02em;}
+  .tab.active .tl{color:var(--ink);}
+
+  svg{display:block;}
+</style>
+</head>
+<body>
+
+<div class="pagehead">
+  <p class="kicker">Roomie · visual direction · 2026-06-24</p>
+  <h1>The sunlit corkboard.</h1>
+  <p>Same warm DNA — linen, espresso, terracotta, one serif — but executed with real hierarchy and air. Paper cards lift off the canvas, Fraunces carries the “home” moments, and every shame mechanic stays gone. Four screens, one mood.</p>
+  <div class="brassrule"></div>
+</div>
+
+<div class="rail">
+
+  <!-- ============ HOME ============ -->
+  <div class="phone">
+    <p class="phone-label">Home</p>
+    <div class="screen">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><span class="dots">5G &nbsp; 100%</span></div>
+      <div class="body">
+        <p class="greet">Good morning,<br><span class="name">Kai</span>.</p>
+        <p class="greet-sub">two of you. all quiet at home.</p>
+
+        <div class="brain">
+          <p class="brain-label">on your mind?</p>
+          <p class="brain-ph">drop a thought, a buy, a chore<span class="brain-cur"></span></p>
+        </div>
+
+        <div class="section-label">lately</div>
+
+        <div class="feed-item">
+          <div class="avatar av-vfya">V</div>
+          <div>
+            <div class="feed-text"><b>Vfya</b> added <b>€30</b> at the market</div>
+            <div class="feed-time">2h ago</div>
+          </div>
+        </div>
+        <div class="feed-item">
+          <div class="avatar av-kai">K</div>
+          <div>
+            <div class="feed-text"><b>You</b> took out the trash</div>
+            <div class="feed-time">yesterday</div>
+          </div>
+        </div>
+        <div class="feed-item">
+          <div class="avatar av-vfya">V</div>
+          <div>
+            <div class="feed-text"><b>Vfya</b> put <b>milk</b> on the shopping list</div>
+            <div class="feed-time">yesterday</div>
+          </div>
+        </div>
+        <div class="quiet"><span class="dinkus">⁂</span> that’s the week so far.</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab active">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+          <span class="tl">Home</span>
+        </div>
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.4 11.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/><path d="M8 8 9.5 3.5h5L16 8"/></svg>
+          <span class="tl">Kitchen</span>
+        </div>
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><path d="m17.5 16.5 1.6 1.6 3-3.4" stroke-width="1.6"/></svg>
+          <span class="tl">Tasks</span>
+        </div>
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.6-.9-1.6-1.2-2.6-1.2-1.4 0-2.4.8-2.4 1.9 0 2.6 5.2 1.4 5.2 4.1 0 1.2-1.1 2-2.6 2-1.1 0-2.2-.4-2.8-1.3M12 6.4v1.6m0 8v1.6"/></svg>
+          <span class="tl">Money</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MONEY ============ -->
+  <div class="phone">
+    <p class="phone-label">Money</p>
+    <div class="screen">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><span class="dots">5G &nbsp; 100%</span></div>
+      <div class="body">
+        <p class="scr-kicker">the house ledger</p>
+        <h2 class="scr-title">Money</h2>
+        <div class="topline"></div>
+
+        <div class="balance">
+          <p class="bl">you owe</p>
+          <p class="amt"><span class="cur">€</span>15<span style="font-size:24px;color:var(--ink-soft)">.00</span></p>
+          <p class="who">to <b>Vfya</b> · your half of the market run</p>
+          <div class="settle-btn">settle up</div>
+        </div>
+
+        <div class="section-label">recent</div>
+
+        <div class="exp-row">
+          <div class="exp-ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.4 11.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/><path d="M8 8 9.5 3.5h5L16 8"/></svg>
+          </div>
+          <div class="exp-main">
+            <div class="exp-title">Market</div>
+            <div class="exp-meta">Vfya paid · split with you</div>
+          </div>
+          <div class="exp-amt">€30.00</div>
+        </div>
+        <div class="exp-row">
+          <div class="exp-ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l1.5 6h11L19 13"/><path d="M5 13l-1-4h16l-1 4M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+          </div>
+          <div class="exp-main">
+            <div class="exp-title">Dish soap &amp; sponges</div>
+            <div class="exp-meta">You paid · split with Vfya</div>
+          </div>
+          <div class="exp-amt">€6.40</div>
+        </div>
+        <div class="exp-row">
+          <div class="exp-ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z"/></svg>
+          </div>
+          <div class="exp-main">
+            <div class="exp-title">Water bill</div>
+            <div class="exp-meta">Vfya paid · split with you</div>
+          </div>
+          <div class="exp-amt">€22.00</div>
+        </div>
+        <div class="quiet"><span class="dinkus">§</span> older runs are tucked below.</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+          <span class="tl">Home</span>
+        </div>
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.4 11.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/><path d="M8 8 9.5 3.5h5L16 8"/></svg>
+          <span class="tl">Kitchen</span>
+        </div>
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><path d="m17.5 16.5 1.6 1.6 3-3.4" stroke-width="1.6"/></svg>
+          <span class="tl">Tasks</span>
+        </div>
+        <div class="tab active">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.6-.9-1.6-1.2-2.6-1.2-1.4 0-2.4.8-2.4 1.9 0 2.6 5.2 1.4 5.2 4.1 0 1.2-1.1 2-2.6 2-1.1 0-2.2-.4-2.8-1.3M12 6.4v1.6m0 8v1.6"/></svg>
+          <span class="tl">Money</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ KITCHEN ============ -->
+  <div class="phone">
+    <p class="phone-label">Kitchen</p>
+    <div class="screen">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><span class="dots">5G &nbsp; 100%</span></div>
+      <div class="body">
+        <p class="scr-kicker">pantry &amp; shopping</p>
+        <h2 class="scr-title">Kitchen</h2>
+        <div class="topline"></div>
+
+        <div class="addfield">
+          <span class="ph">add something… süt, coffee</span>
+          <span class="plus">+</span>
+        </div>
+
+        <div class="section-label">shopping list</div>
+
+        <div class="k-row">
+          <div class="k-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h7l3 4v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/><path d="M9 8h6"/></svg></div>
+          <div class="k-name">milk</div>
+          <span class="pill pill-claim">i’ll get it</span>
+        </div>
+        <div class="k-row">
+          <div class="k-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10h9a4 4 0 0 1 0 8H8a3 3 0 0 1-3-3v-3a2 2 0 0 1 1-2z"/><path d="M9 6c0-1 .8-2 0-3M12 6c0-1 .8-2 0-3"/></svg></div>
+          <div class="k-name">coffee</div>
+          <span class="claim-note">Vfya is getting it</span>
+        </div>
+
+        <div class="section-label">in the pantry</div>
+
+        <div class="k-row">
+          <div class="k-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 3 3 5v9a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-9l3-5z"/></svg></div>
+          <div class="k-name">olive oil</div>
+          <span class="pill pill-out">out</span>
+        </div>
+        <div class="k-row">
+          <div class="k-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12v9a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3z"/><path d="M9 8V5h6v3"/></svg></div>
+          <div class="k-name aging">eggs</div>
+          <span class="agingdot" title="getting on a bit"></span>
+          <span class="pill pill-out">out</span>
+        </div>
+        <div class="k-row">
+          <div class="k-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v4l-2 2v8a3 3 0 0 1-6 0V9L7 7z"/></svg></div>
+          <div class="k-name">pasta</div>
+          <span class="pill pill-out">out</span>
+        </div>
+        <div class="quiet"><span class="dinkus">⁂</span> a faded name means it’s getting on a bit.</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+          <span class="tl">Home</span>
+        </div>
+        <div class="tab active">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.4 11.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/><path d="M8 8 9.5 3.5h5L16 8"/></svg>
+          <span class="tl">Kitchen</span>
+        </div>
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><path d="m17.5 16.5 1.6 1.6 3-3.4" stroke-width="1.6"/></svg>
+          <span class="tl">Tasks</span>
+        </div>
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.6-.9-1.6-1.2-2.6-1.2-1.4 0-2.4.8-2.4 1.9 0 2.6 5.2 1.4 5.2 4.1 0 1.2-1.1 2-2.6 2-1.1 0-2.2-.4-2.8-1.3M12 6.4v1.6m0 8v1.6"/></svg>
+          <span class="tl">Money</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TASKS ============ -->
+  <div class="phone">
+    <p class="phone-label">Tasks</p>
+    <div class="screen">
+      <div class="notch"></div>
+      <div class="statusbar"><span>9:41</span><span class="dots">5G &nbsp; 100%</span></div>
+      <div class="body">
+        <p class="scr-kicker">whose turn, no score</p>
+        <h2 class="scr-title">Tasks</h2>
+        <div class="topline"></div>
+
+        <div class="section-label">mine</div>
+
+        <div class="chore">
+          <div class="chore-top">
+            <span class="chore-name">Take out the trash</span>
+            <span class="turn turn-mine">your turn</span>
+          </div>
+          <div class="chore-actions">
+            <span class="act act-pass">pass</span>
+            <span class="act act-done">you did it</span>
+          </div>
+          <div class="chore-hist">
+            <div class="hist-row"><span class="hist-txt"><b>Vfya</b> did it</span><span class="hist-time">3 days ago</span></div>
+            <div class="hist-row"><span class="hist-txt"><b>You</b> moved on from it</span><span class="hist-time">last week</span></div>
+          </div>
+        </div>
+
+        <div class="mine-row">
+          <span class="mine-check"></span>
+          <span class="mine-title">call the landlord back</span>
+        </div>
+
+        <div class="section-label">house</div>
+
+        <div class="chore">
+          <div class="chore-top">
+            <span class="chore-name">Kitchen floor</span>
+            <span class="turn turn-other">Vfya</span>
+          </div>
+        </div>
+        <div class="chore">
+          <div class="chore-top">
+            <span class="chore-name">Water the plants</span>
+            <span class="turn turn-other">Vfya</span>
+          </div>
+        </div>
+
+        <div class="quiet"><span class="dinkus">§</span> tap a chore to see who’s done it lately.</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/></svg>
+          <span class="tl">Home</span>
+        </div>
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.4 11.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/><path d="M8 8 9.5 3.5h5L16 8"/></svg>
+          <span class="tl">Kitchen</span>
+        </div>
+        <div class="tab active">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><path d="m17.5 16.5 1.6 1.6 3-3.4" stroke-width="1.6"/></svg>
+          <span class="tl">Tasks</span>
+        </div>
+        <div class="tab">
+          <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.6-.9-1.6-1.2-2.6-1.2-1.4 0-2.4.8-2.4 1.9 0 2.6 5.2 1.4 5.2 4.1 0 1.2-1.1 2-2.6 2-1.1 0-2.2-.4-2.8-1.3M12 6.4v1.6m0 8v1.6"/></svg>
+          <span class="tl">Money</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
