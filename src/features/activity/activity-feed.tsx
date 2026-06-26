@@ -1,5 +1,6 @@
 // The home diary. BODY-phase render: one line per raw event, newest first.
-// (BRAIN-phase grouping/summary/ranking comes later — this just shows the truth.)
+// Renders rows only (no heading) so the caller can wrap it in a Card under its
+// own section header. (BRAIN-phase grouping/summary comes later.)
 
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -30,13 +31,14 @@ export function ActivityFeed({ householdId }: { householdId: string }) {
   }
 
   return (
-    <View style={styles.list}>
-      <Text style={styles.heading}>Home diary</Text>
-      {events.map((event) => {
+    <View>
+      {events.map((event, idx) => {
         const { icon, text } = describeEvent(event.type, event.metadata);
         return (
-          <View key={event.id} style={styles.row}>
-            <Text style={styles.icon}>{icon}</Text>
+          <View key={event.id} style={[styles.row, idx > 0 && styles.rowDivided]}>
+            <View style={styles.iconChip}>
+              <Text style={styles.icon}>{icon}</Text>
+            </View>
             <Text style={styles.text}>{text}</Text>
             <Text style={styles.time}>{timeAgo(event.createdAt)}</Text>
           </View>
@@ -47,18 +49,18 @@ export function ActivityFeed({ householdId }: { householdId: string }) {
 }
 
 const styles = StyleSheet.create({
-  list: { marginTop: 20, gap: 2 },
-  heading: {
-    fontSize: 12,
-    fontFamily: RoomieFonts.bodyBold,
-    color: Roomie.sub,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginBottom: 8,
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, gap: 12 },
+  rowDivided: { borderTopWidth: 1, borderTopColor: Roomie.rule },
+  iconChip: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Roomie.sageSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10 },
-  icon: { fontSize: 16, width: 22 },
-  text: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.ink },
-  time: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.sub },
-  muted: { fontSize: 14, fontFamily: RoomieFonts.body, color: Roomie.sub, marginTop: 20 },
+  icon: { fontSize: 17 },
+  text: { flex: 1, fontSize: 14.5, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink, lineHeight: 19 },
+  time: { fontSize: 11, fontFamily: RoomieFonts.bodyBold, color: Roomie.ink3 },
+  muted: { fontSize: 14, fontFamily: RoomieFonts.body, color: Roomie.sub, padding: 16 },
 });

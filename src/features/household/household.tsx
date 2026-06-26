@@ -5,9 +5,30 @@
 import * as Clipboard from 'expo-clipboard';
 import { id } from '@instantdb/react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Roomie, RoomieFonts } from '@/constants/theme';
+import {
+  Card,
+  ChunkyButton,
+  Count,
+  Hero,
+  HeroBar,
+  HeroEyebrow,
+  HeroTitle,
+  MemberStack,
+  SectionHead,
+} from '@/components/ui/kit';
 import { db } from '@/lib/db';
 import { logActivity } from '@/features/activity/activity';
 import { ActivityFeed } from '@/features/activity/activity-feed';
@@ -15,13 +36,23 @@ import { BrainInput } from '@/features/brain/brain-input';
 
 import { STARTER_CHORES } from '@/features/tasks/starter';
 
+type Roommate = { name: string; seed: string };
+
 const INVITE_CODE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function HouseholdGate({ userId, userName }: { userId: string; userName: string }) {
+export function HouseholdGate({
+  userId,
+  userName,
+  onSignOut,
+}: {
+  userId: string;
+  userName: string;
+  onSignOut: () => void;
+}) {
   const { isLoading, error, data } = db.useQuery({
     memberships: {
       $: { where: { 'user.id': userId, status: 'active' } },
-      household: {},
+      household: { memberships: { $: { where: { status: 'active' } }, user: {} } },
     },
   });
 
@@ -54,8 +85,15 @@ export function HouseholdGate({ userId, userName }: { userId: string; userName: 
   const household = membership?.household;
 
   if (!household) {
-    return <NoHousehold userId={userId} userName={userName} />;
+    return <NoHousehold userId={userId} userName={userName} onSignOut={onSignOut} />;
   }
+
+  const members: Roommate[] = (household.memberships ?? [])
+    .map((m) => ({
+      name: m.displayName ?? m.user?.email?.split('@')[0] ?? 'Someone',
+      seed: m.user?.id ?? m.id,
+    }))
+    .filter((m) => m.seed);
 
   return (
     <HouseholdHome
@@ -65,25 +103,41 @@ export function HouseholdGate({ userId, userName }: { userId: string; userName: 
       membershipId={membership.id}
       userId={userId}
       userName={userName}
+      members={members}
+      onSignOut={onSignOut}
     />
   );
 }
 
-function NoHousehold({ userId, userName }: { userId: string; userName: string }) {
+function NoHousehold({
+  userId,
+  userName,
+  onSignOut,
+}: {
+  userId: string;
+  userName: string;
+  onSignOut: () => void;
+}) {
   const [mode, setMode] = useState<'create' | 'join'>('create');
   return (
-    <View style={styles.block}>
-      {mode === 'create' ? (
-        <CreateHousehold userId={userId} userName={userName} />
-      ) : (
-        <JoinHousehold userId={userId} userName={userName} />
-      )}
-      <Pressable onPress={() => setMode(mode === 'create' ? 'join' : 'create')} style={styles.link}>
-        <Text style={styles.linkLabel}>
-          {mode === 'create' ? 'Have a code? Join a home' : 'Create a home instead'}
-        </Text>
-      </Pressable>
-    </View>
+    <SafeAreaView style={styles.noHomeSafe}>
+      <ScrollView contentContainerStyle={styles.noHomeBody} keyboardShouldPersistTaps="handled">
+        <Text style={styles.brand}>Roomie</Text>
+        {mode === 'create' ? (
+          <CreateHousehold userId={userId} userName={userName} />
+        ) : (
+          <JoinHousehold userId={userId} userName={userName} />
+        )}
+        <Pressable onPress={() => setMode(mode === 'create' ? 'join' : 'create')} style={styles.link}>
+          <Text style={styles.linkLabel}>
+            {mode === 'create' ? 'Have a code? Join a home' : 'Create a home instead'}
+          </Text>
+        </Pressable>
+        <Pressable onPress={onSignOut} style={styles.link}>
+          <Text style={styles.signoutLabel}>Sign out</Text>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -235,6 +289,8 @@ function HouseholdHome({
   membershipId,
   userId,
   userName,
+  members,
+  onSignOut,
 }: {
   name: string;
   role: string;
@@ -242,7 +298,10 @@ function HouseholdHome({
   membershipId: string;
   userId: string;
   userName: string;
+  members: Roommate[];
+  onSignOut: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [copied, setCopied] = useState(false);
 
   const onCopy = async () => {
@@ -281,29 +340,57 @@ function HouseholdHome({
     ]);
   };
 
+  const roommateSub = members.length <= 1 ? 'just you so far' : `${members.length} roommates`;
+  const stackLabel =
+    members.length <= 1 ? 'invite your roommates' : members.map((m) => m.name).join(' · ');
+
   return (
-    <View style={styles.block}>
-      <BrainInput householdId={code} userId={userId} userName={userName} />
+    <View style={styles.homeScreen}>
+      <ScrollView
+        contentContainerStyle={styles.homeScroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Hero topInset={insets.top}>
+          <HeroBar houseName={name} sub={roommateSub} you={userName} youSeed={userId} />
+          <HeroEyebrow>{`You're the ${role}`}</HeroEyebrow>
+          <HeroTitle>Hi {userName} 👋</HeroTitle>
+          {members.length > 0 ? <MemberStack members={members} label={stackLabel} /> : null}
+        </Hero>
 
-      <Text style={styles.eyebrow}>Your home</Text>
-      <Text style={styles.homeName}>{name} 🏡</Text>
-      <Text style={styles.sub}>You&apos;re the {role}.</Text>
+        <View style={styles.homeBody}>
+          <BrainInput householdId={code} userId={userId} userName={userName} />
 
-      <View style={styles.inviteBox}>
-        <Text style={styles.inviteLabel}>Invite code — share with your roommates</Text>
-        <Text style={styles.inviteCode} selectable>
-          {code}
-        </Text>
-        <Pressable style={styles.copyButton} onPress={onCopy}>
-          <Text style={styles.copyLabel}>{copied ? 'Copied ✓' : 'Copy code'}</Text>
-        </Pressable>
-      </View>
+          <Card pad>
+            <Text style={styles.inviteLabel}>Invite code — share with your roommates</Text>
+            <Text style={styles.inviteCode} selectable>
+              {code}
+            </Text>
+            <ChunkyButton
+              label={copied ? 'Copied ✓' : 'Copy code'}
+              tone="green"
+              onPress={onCopy}
+              style={styles.copyChunky}
+            />
+          </Card>
 
-      <ActivityFeed householdId={code} />
+          <View style={styles.section}>
+            <SectionHead title="House activity" right={<Count>recent</Count>} />
+            <Card>
+              <ActivityFeed householdId={code} />
+            </Card>
+          </View>
 
-      <Pressable onPress={onLeave} style={styles.leave}>
-        <Text style={styles.leaveLabel}>Leave home</Text>
-      </Pressable>
+          <View style={styles.homeFooter}>
+            <Pressable onPress={onLeave} style={styles.leave}>
+              <Text style={styles.leaveLabel}>Leave home</Text>
+            </Pressable>
+            <Pressable onPress={onSignOut} style={styles.leave}>
+              <Text style={styles.signoutLabel}>Sign out</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -391,5 +478,19 @@ const styles = StyleSheet.create({
   copyLabel: { color: Roomie.canvas, fontSize: 14, fontFamily: RoomieFonts.bodyBold },
   leave: { alignSelf: 'flex-start', paddingVertical: 8 },
   leaveLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
+  signoutLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.danger },
   error: { color: Roomie.danger, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
+
+  // Home (in a household) — full-bleed hero + carded body.
+  homeScreen: { flex: 1, backgroundColor: Roomie.canvas },
+  homeScroll: { paddingBottom: 120 }, // clears the native tab bar (was hidden)
+  homeBody: { padding: 18, gap: 16 },
+  section: { gap: 11 },
+  copyChunky: { marginTop: 12, alignSelf: 'flex-start', minWidth: 150 },
+  homeFooter: { flexDirection: 'row', gap: 18, marginTop: 4 },
+
+  // No-household (create / join) screen.
+  noHomeSafe: { flex: 1, backgroundColor: Roomie.canvas },
+  noHomeBody: { padding: 28, paddingTop: 12, gap: 12 },
+  brand: { fontSize: 30, fontFamily: RoomieFonts.displayBold, color: Roomie.forest, marginBottom: 8 },
 });

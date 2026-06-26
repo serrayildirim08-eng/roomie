@@ -1,8 +1,8 @@
 // Tasks — two quiet lists, split by WHO ACTS, not by what kind of task:
 //
 // MINE — your action list: house chores whose turn is yours right now
-// (terracotta "Your turn" pill, Done/Pass) + your personal to-dos. One
-// glance answers "what's on my plate".
+// (forest "Your turn" pill, Done/Pass) + your personal to-dos. One glance
+// answers "what's on my plate".
 //
 // HOUSE — the rest of the board: chores on someone else's turn (faded name
 // pill; Done ✓ still available — anyone can close, credit to the doer, the
@@ -24,8 +24,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  Hero,
+  HeroBar,
+  HeroEyebrow,
+  HeroTitle,
+  SectionHead,
+  StatStrip,
+} from '@/components/ui/kit';
 import { Roomie, RoomieFonts } from '@/constants/theme';
 import { logActivity, timeAgo } from '@/features/activity/activity';
 import { nowMs } from '@/features/money/money-logic';
@@ -41,6 +49,7 @@ function emailName(email?: string): string | undefined {
 }
 
 export function TasksScreen({ userId }: { userId: string }) {
+  const insets = useSafeAreaInsets();
   const { isLoading, error, data } = db.useQuery({
     memberships: {
       $: { where: { 'user.id': userId, status: 'active' } },
@@ -102,6 +111,12 @@ export function TasksScreen({ userId }: { userId: string }) {
   const myTasks = household.personalTasks
     .filter((t) => t.owner?.id === userId)
     .sort((a, b) => Number(a.createdAt) - Number(b.createdAt));
+
+  const taskStats = [
+    { k: 'Your turn', v: String(myChores.length) },
+    { k: 'Personal', v: String(myTasks.length) },
+    { k: 'House', v: String(otherChores.length) },
+  ];
 
   // Suggestion library ("pizza menu"): rows the home doesn't have yet,
   // grouped, one tap to add. Already-added chores drop out automatically.
@@ -165,8 +180,17 @@ export function TasksScreen({ userId }: { userId: string }) {
     await db.transact(db.tx.personalTasks[taskId].update({ status: 'done' }));
   };
 
-  const onMineDelete = async (taskId: string) => {
-    await db.transact(db.tx.personalTasks[taskId].delete());
+  const onMineDelete = (taskId: string, title: string) => {
+    Alert.alert('Remove this task?', `"${title}" will be removed.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          void db.transact(db.tx.personalTasks[taskId].delete());
+        },
+      },
+    ]);
   };
 
   const advance = async (
@@ -275,94 +299,104 @@ export function TasksScreen({ userId }: { userId: string }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Tasks</Text>
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Hero topInset={insets.top}>
+          <HeroBar houseName={household.name} sub="Tasks · whose turn" you={myName} youSeed={userId} />
+          <HeroEyebrow>Tasks · shared fairly</HeroEyebrow>
+          <HeroTitle>{myChores.length > 0 ? 'It’s your turn' : 'All caught up 🌿'}</HeroTitle>
+          <StatStrip stats={taskStats} />
+        </Hero>
 
-        <Text style={styles.section}>Mine</Text>
-        {myChores.map(renderChore)}
-        <View style={styles.addRow}>
-          <TextInput
-            style={styles.input}
-            placeholder="Add a task for yourself…"
-            placeholderTextColor={Roomie.sub}
-            value={mineDraft}
-            onChangeText={setMineDraft}
-            onSubmitEditing={onAddMine}
-            returnKeyType="done"
-          />
-          <Pressable style={styles.addButton} onPress={onAddMine}>
-            <Text style={styles.addButtonLabel}>+</Text>
-          </Pressable>
-        </View>
-        {myTasks.length === 0 && myChores.length === 0 ? (
-          <Text style={styles.muted}>Nothing on your plate. 🤍</Text>
-        ) : (
-          myTasks.map((t) => (
-            <View key={t.id} style={styles.mineRow}>
-              <Text style={styles.mineTitle}>{t.title}</Text>
-              <Pressable style={styles.done} onPress={() => onMineDone(t.id)}>
-                <Text style={styles.doneLabel}>Done ✓</Text>
-              </Pressable>
-              <Pressable
-                style={styles.delete}
-                onPress={() => onMineDelete(t.id)}
-                hitSlop={8}
-                accessibilityLabel={`Remove ${t.title}`}
-              >
-                <Text style={styles.deleteLabel}>✕</Text>
+        <View style={styles.body}>
+          <View style={styles.section}>
+            <SectionHead title="Mine" />
+            {myChores.map(renderChore)}
+            {myTasks.map((t) => (
+              <View key={t.id} style={styles.mineRow}>
+                <Text style={styles.mineTitle}>{t.title}</Text>
+                <Pressable style={styles.done} onPress={() => onMineDone(t.id)}>
+                  <Text style={styles.doneLabel}>Done ✓</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.delete}
+                  onPress={() => onMineDelete(t.id, t.title)}
+                  hitSlop={8}
+                  accessibilityLabel={`Remove ${t.title}`}
+                >
+                  <Text style={styles.deleteLabel}>✕</Text>
+                </Pressable>
+              </View>
+            ))}
+            {myTasks.length === 0 && myChores.length === 0 ? (
+              <Text style={styles.muted}>Nothing on your plate. 🤍</Text>
+            ) : null}
+            <View style={styles.addRow}>
+              <TextInput
+                style={styles.input}
+                placeholder="Add a task for yourself…"
+                placeholderTextColor={Roomie.sub}
+                value={mineDraft}
+                onChangeText={setMineDraft}
+                onSubmitEditing={onAddMine}
+                returnKeyType="done"
+              />
+              <Pressable style={styles.addButton} onPress={onAddMine}>
+                <Text style={styles.addButtonLabel}>+</Text>
               </Pressable>
             </View>
-          ))
-        )}
+          </View>
 
-        <Text style={styles.section}>House</Text>
-        <View style={styles.addRow}>
-          <TextInput
-            style={styles.input}
-            placeholder="Add a house chore… (trash)"
-            placeholderTextColor={Roomie.sub}
-            value={houseDraft}
-            onChangeText={setHouseDraft}
-            onSubmitEditing={onAddHouse}
-            returnKeyType="done"
-          />
-          <Pressable style={styles.addButton} onPress={onAddHouse}>
-            <Text style={styles.addButtonLabel}>+</Text>
-          </Pressable>
+          <View style={styles.section}>
+            <SectionHead title="House" />
+            <View style={styles.addRow}>
+              <TextInput
+                style={styles.input}
+                placeholder="Add a house chore… (trash)"
+                placeholderTextColor={Roomie.sub}
+                value={houseDraft}
+                onChangeText={setHouseDraft}
+                onSubmitEditing={onAddHouse}
+                returnKeyType="done"
+              />
+              <Pressable style={styles.addButton} onPress={onAddHouse}>
+                <Text style={styles.addButtonLabel}>+</Text>
+              </Pressable>
+            </View>
+            {otherChores.length === 0 ? (
+              <Text style={styles.muted}>All quiet. 🌿</Text>
+            ) : (
+              otherChores.map(renderChore)
+            )}
+
+            {librarySections.length > 0 ? (
+              <Pressable style={styles.seedLink} onPress={() => setShowLibrary(!showLibrary)}>
+                <Text style={styles.seedLinkLabel}>
+                  {showLibrary ? '− Hide suggestions' : '+ Add from suggestions'}
+                </Text>
+              </Pressable>
+            ) : null}
+            {showLibrary
+              ? librarySections.map((g) => (
+                  <View key={g.group} style={styles.libGroup}>
+                    <Text style={styles.libGroupTitle}>{g.group}</Text>
+                    {g.chores.map((s) => (
+                      <Pressable
+                        key={s.name}
+                        style={styles.libRow}
+                        onPress={() => onAddSuggestion(s.name)}
+                      >
+                        <Text style={styles.libName}>+ {s.name}</Text>
+                        <Text style={styles.libHint}>{s.hint}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ))
+              : null}
+          </View>
         </View>
-        {otherChores.length === 0 ? (
-          <Text style={styles.muted}>All quiet. 🌿</Text>
-        ) : (
-          otherChores.map(renderChore)
-        )}
-
-        {librarySections.length > 0 ? (
-          <Pressable style={styles.seedLink} onPress={() => setShowLibrary(!showLibrary)}>
-            <Text style={styles.seedLinkLabel}>
-              {showLibrary ? '− Hide suggestions' : '+ Add from suggestions'}
-            </Text>
-          </Pressable>
-        ) : null}
-        {showLibrary
-          ? librarySections.map((g) => (
-              <View key={g.group} style={styles.libGroup}>
-                <Text style={styles.libGroupTitle}>{g.group}</Text>
-                {g.chores.map((s) => (
-                  <Pressable
-                    key={s.name}
-                    style={styles.libRow}
-                    onPress={() => onAddSuggestion(s.name)}
-                  >
-                    <Text style={styles.libName}>+ {s.name}</Text>
-                    <Text style={styles.libHint}>{s.hint}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            ))
-          : null}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -377,16 +411,10 @@ function Centered({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Roomie.canvas },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { padding: 24, gap: 12 },
-  heading: { fontSize: 34, fontFamily: RoomieFonts.displayBold, color: Roomie.ink },
-  section: {
-    fontSize: 12,
-    fontFamily: RoomieFonts.bodyBold,
-    color: Roomie.sub,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginTop: 8,
-  },
+  screen: { flex: 1, backgroundColor: Roomie.canvas },
+  scroll: { paddingBottom: 120 },
+  body: { padding: 18, gap: 16 },
+  section: { gap: 11 },
   addRow: { flexDirection: 'row', gap: 8 },
   input: {
     flex: 1,
@@ -406,27 +434,27 @@ const styles = StyleSheet.create({
     width: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Roomie.accent,
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
   },
   addButtonLabel: { color: Roomie.onAccent, fontSize: 24, fontFamily: RoomieFonts.bodyBold },
   muted: { fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.sub },
   choreCard: {
     backgroundColor: Roomie.card,
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: Roomie.hairline,
+    borderColor: '#EFEBE1',
     paddingHorizontal: 14,
-    paddingVertical: 4,
+    paddingVertical: 2,
+    shadowColor: Roomie.forestInk,
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
   },
-  choreRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
-  choreName: { flex: 1, fontSize: 16, fontFamily: RoomieFonts.bodyBold, color: Roomie.ink },
+  choreRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
+  choreName: { flex: 1, fontSize: 15.5, fontFamily: RoomieFonts.display, color: Roomie.ink },
   turnPill: {
     borderRadius: 999,
     paddingVertical: 5,
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     backgroundColor: Roomie.input,
     borderWidth: 1,
     borderColor: Roomie.hairline,
@@ -460,12 +488,22 @@ const styles = StyleSheet.create({
   },
   historyEmpty: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.sub },
   historyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
-  historyText: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.ink },
-  historyTime: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.sub },
-  mineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  historyText: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  historyTime: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.ink3 },
+  mineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Roomie.card,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#EFEBE1',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
   mineTitle: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   seedLink: { paddingVertical: 8 },
-  seedLinkLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
+  seedLinkLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.forest },
   libGroup: { gap: 2, marginBottom: 6 },
   libGroupTitle: {
     fontSize: 11,

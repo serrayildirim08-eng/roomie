@@ -15,8 +15,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  Card,
+  Hero,
+  HeroBar,
+  HeroEyebrow,
+  SectionHead,
+  StatStrip,
+} from '@/components/ui/kit';
 import { Roomie, RoomieFonts } from '@/constants/theme';
 import { logActivity } from '@/features/activity/activity';
 import { db } from '@/lib/db';
@@ -36,6 +44,7 @@ function emailName(email?: string): string | undefined {
 }
 
 export function MoneyScreen({ userId }: { userId: string }) {
+  const insets = useSafeAreaInsets();
   const { isLoading, error, data } = db.useQuery({
     memberships: {
       $: { where: { 'user.id': userId, status: 'active' } },
@@ -120,6 +129,20 @@ export function MoneyScreen({ userId }: { userId: string }) {
   // Privacy: you only see debts you're part of — never what two housemates
   // owe each other.
   const debts = simplifyDebts(net).filter((d) => d.fromId === userId || d.toId === userId);
+
+  // Hero balance — your single net number, plus a 3-up strip.
+  const myNet = net[userId] ?? 0;
+  const balanceText = myNet === 0 ? '€0.00' : `${myNet > 0 ? '+' : '−'}${formatEur(Math.abs(myNet))}`;
+  const balanceCap =
+    myNet > 0 ? "you're owed overall" : myNet < 0 ? 'you owe overall' : 'all settled up 🤍';
+  const owedToYou = debts.filter((d) => d.toId === userId).reduce((s, d) => s + d.amountCents, 0);
+  const youOweTotal = debts.filter((d) => d.fromId === userId).reduce((s, d) => s + d.amountCents, 0);
+  const loggedTotal = expenses.reduce((s, e) => s + e.amountCents, 0);
+  const balanceStats = [
+    { k: 'Owed to you', v: formatEur(owedToYou) },
+    { k: 'You owe', v: formatEur(youOweTotal) },
+    { k: 'Logged', v: formatEur(loggedTotal) },
+  ];
 
   // Effective form choices (fall back to defaults until the user picks).
   const payerId = paidById ?? userId;
@@ -233,12 +256,19 @@ export function MoneyScreen({ userId }: { userId: string }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Money</Text>
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Hero topInset={insets.top}>
+          <HeroBar houseName={household.name} sub="Money" you={myName} youSeed={userId} />
+          <HeroEyebrow>Your balance overall</HeroEyebrow>
+          <Text style={styles.heroBalance}>{balanceText}</Text>
+          <Text style={styles.heroCap}>{balanceCap}</Text>
+          <StatStrip stats={balanceStats} />
+        </Hero>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Add an expense</Text>
+        <View style={styles.body}>
+          <Card pad style={styles.formCard}>
+            <Text style={styles.cardTitle}>Add an expense</Text>
           <TextInput
             style={styles.input}
             placeholder="What for? (e.g. groceries)"
@@ -304,62 +334,79 @@ export function MoneyScreen({ userId }: { userId: string }) {
               <Text style={styles.buttonLabel}>Add expense</Text>
             )}
           </Pressable>
+          </Card>
+
+          <View style={styles.section}>
+            <SectionHead title="Your balance" />
+            {debts.length === 0 ? (
+              <Card pad>
+                <Text style={styles.muted}>You&apos;re all square. 🤍</Text>
+              </Card>
+            ) : (
+              <Card>
+                {debts.map((d, idx) => {
+                  const youPay = d.fromId === userId;
+                  const label = youPay
+                    ? `You owe ${nameById[d.toId]}`
+                    : `${nameById[d.fromId]} owes you`;
+                  return (
+                    <View key={idx} style={[styles.debtRow, idx > 0 && styles.rowDivided]}>
+                      <Text style={styles.debtText}>{label}</Text>
+                      <Text style={[styles.debtAmount, !youPay && styles.amountPositive]}>
+                        {formatEur(d.amountCents)}
+                      </Text>
+                      {youPay ? (
+                        <Pressable
+                          style={[styles.settlePink, settling && styles.disabled]}
+                          onPress={() => onSettle(d.toId, d.amountCents)}
+                          disabled={settling}
+                        >
+                          <Text style={styles.settlePinkLabel}>Settle</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </Card>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <SectionHead title="Recent expenses" />
+            {recentExpenses.length === 0 ? (
+              <Card pad>
+                <Text style={styles.muted}>Nothing yet.</Text>
+              </Card>
+            ) : (
+              <Card>
+                {recentExpenses.map((e, idx) => (
+                  <View key={e.id} style={[styles.expenseRow, idx > 0 && styles.rowDivided]}>
+                    <View style={styles.expenseInfo}>
+                      <Text style={styles.debtText}>{e.title}</Text>
+                      <Text style={styles.expenseMeta}>
+                        {e.paidBy?.id === userId
+                          ? 'You'
+                          : (nameById[e.paidBy?.id ?? ''] ?? 'Someone')}{' '}
+                        paid · {e.participants.length} sharing
+                      </Text>
+                    </View>
+                    <Text style={styles.debtAmount}>{formatEur(e.amountCents)}</Text>
+                    <Pressable
+                      style={styles.delete}
+                      onPress={() => onDelete(e.id, e.title)}
+                      hitSlop={8}
+                      accessibilityLabel={`Delete ${e.title}`}
+                    >
+                      <Text style={styles.deleteLabel}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </Card>
+            )}
+          </View>
         </View>
-
-        <Text style={styles.section}>Your balance</Text>
-        {debts.length === 0 ? (
-          <Text style={styles.muted}>You&apos;re all square. 🤍</Text>
-        ) : (
-          debts.map((d, idx) => {
-            const youPay = d.fromId === userId;
-            const label = youPay
-              ? `You owe ${nameById[d.toId]}`
-              : `${nameById[d.fromId]} owes you`;
-            return (
-              <View key={idx} style={styles.debtRow}>
-                <Text style={styles.debtText}>{label}</Text>
-                <Text style={styles.debtAmount}>{formatEur(d.amountCents)}</Text>
-                {youPay ? (
-                  <Pressable
-                    style={[styles.settle, settling && styles.disabled]}
-                    onPress={() => onSettle(d.toId, d.amountCents)}
-                    disabled={settling}
-                  >
-                    <Text style={styles.settleLabel}>Settle</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            );
-          })
-        )}
-
-        <Text style={styles.section}>Recent expenses</Text>
-        {recentExpenses.length === 0 ? (
-          <Text style={styles.muted}>Nothing yet.</Text>
-        ) : (
-          recentExpenses.map((e) => (
-            <View key={e.id} style={styles.expenseRow}>
-              <View style={styles.expenseInfo}>
-                <Text style={styles.debtText}>{e.title}</Text>
-                <Text style={styles.expenseMeta}>
-                  {e.paidBy?.id === userId ? 'You' : (nameById[e.paidBy?.id ?? ''] ?? 'Someone')}{' '}
-                  paid · {e.participants.length} sharing
-                </Text>
-              </View>
-              <Text style={styles.debtAmount}>{formatEur(e.amountCents)}</Text>
-              <Pressable
-                style={styles.delete}
-                onPress={() => onDelete(e.id, e.title)}
-                hitSlop={8}
-                accessibilityLabel={`Delete ${e.title}`}
-              >
-                <Text style={styles.deleteLabel}>✕</Text>
-              </Pressable>
-            </View>
-          ))
-        )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -374,16 +421,18 @@ function Centered({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Roomie.canvas },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { padding: 24, gap: 16 },
-  heading: { fontSize: 34, fontFamily: RoomieFonts.displayBold, color: Roomie.ink },
-  card: {
-    backgroundColor: Roomie.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Roomie.hairline,
-    padding: 16,
-    gap: 10,
+  screen: { flex: 1, backgroundColor: Roomie.canvas },
+  scroll: { paddingBottom: 120 },
+  body: { padding: 18, gap: 16 },
+  heroBalance: {
+    fontFamily: RoomieFonts.displayBold,
+    fontSize: 54,
+    lineHeight: 56,
+    color: '#fff',
+    marginTop: 12,
   },
+  heroCap: { fontFamily: RoomieFonts.bodyBold, fontSize: 13.5, color: 'rgba(255,255,255,0.9)', marginTop: 4 },
+  formCard: { gap: 10 },
   cardTitle: { fontSize: 17, fontFamily: RoomieFonts.display, color: Roomie.ink },
   input: {
     borderWidth: 1,
@@ -422,29 +471,36 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.6 },
   buttonLabel: { color: Roomie.onAccent, fontSize: 16, fontFamily: RoomieFonts.bodyBold },
-  section: {
-    fontSize: 12,
-    fontFamily: RoomieFonts.bodyBold,
-    color: Roomie.sub,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginTop: 8,
-  },
+  section: { gap: 11 },
   muted: { fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.sub },
-  debtRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  rowDivided: { borderTopWidth: 1, borderTopColor: Roomie.rule },
+  debtRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
   debtText: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
-  debtAmount: { fontSize: 15, fontFamily: RoomieFonts.bodyBold, color: Roomie.ink },
-  settle: {
-    backgroundColor: Roomie.sage,
+  debtAmount: { fontSize: 17, fontFamily: RoomieFonts.displayBold, color: Roomie.ink },
+  amountPositive: { color: Roomie.forest },
+  settlePink: {
+    backgroundColor: Roomie.pink,
     borderRadius: 12,
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
   },
-  settleLabel: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  expenseRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  settlePinkLabel: { color: '#fff', fontSize: 13.5, fontFamily: RoomieFonts.display },
+  expenseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
   expenseInfo: { flex: 1, gap: 2 },
-  expenseMeta: { fontSize: 12, color: '#9b9b9b' },
+  expenseMeta: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink3 },
   delete: { padding: 6 },
-  deleteLabel: { fontSize: 15, color: '#c0392b' },
-  error: { color: '#c0392b', fontSize: 14 },
+  deleteLabel: { fontSize: 15, color: Roomie.danger },
+  error: { color: Roomie.danger, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
 });
