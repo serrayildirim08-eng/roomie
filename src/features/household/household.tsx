@@ -36,9 +36,9 @@ import { BrainInput } from '@/features/brain/brain-input';
 
 import { STARTER_CHORES } from '@/features/tasks/starter';
 
-type Roommate = { name: string; seed: string };
+import { generateInviteCode, INVITE_CODE_SHAPE, normalizeInviteCode } from './invite-code';
 
-const INVITE_CODE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+type Roommate = { name: string; seed: string };
 
 export function HouseholdGate({
   userId,
@@ -65,6 +65,16 @@ export function HouseholdGate({
     if (myMembership.displayName === userName) return;
     void db.transact(db.tx.memberships[myMembership.id].update({ displayName: userName }));
   }, [myMembership, userName]);
+
+  // Backfill: homes created before short invite codes existed have none. Mint
+  // one on first view so every home has a shareable code.
+  const householdForCode = myMembership?.household;
+  useEffect(() => {
+    if (!householdForCode || householdForCode.inviteCode) return;
+    void db.transact(
+      db.tx.households[householdForCode.id].update({ inviteCode: generateInviteCode() }),
+    );
+  }, [householdForCode?.id, householdForCode?.inviteCode]);
 
   if (isLoading) {
     return (
@@ -99,7 +109,8 @@ export function HouseholdGate({
     <HouseholdHome
       name={household.name}
       role={membership.role}
-      code={household.id}
+      householdId={household.id}
+      code={household.inviteCode ?? ''}
       membershipId={membership.id}
       userId={userId}
       userName={userName}
@@ -152,15 +163,12 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
       setError('Give your home a name.');
       return;
     }
-    if (INVITE_CODE_SHAPE.test(trimmed)) {
-      setError('That looks like an invite code — tap “Have a code? Join a home” below.');
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
       const householdId = id();
       const membershipId = id();
+      const inviteCode = generateInviteCode();
       const now = Date.now();
       // Create the home + your owner membership FIRST and let it commit. The
       // chore-seed perms check "is this person a member of the household", which
@@ -169,7 +177,7 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
       // it without loosening the rules.
       await db.transact([
         db.tx.households[householdId]
-          .update({ name: trimmed, creatorId: userId, createdAt: now })
+          .update({ name: trimmed, creatorId: userId, inviteCode, createdAt: now })
           .link({ creator: userId }),
         db.tx.memberships[membershipId]
           .update({
@@ -226,25 +234,32 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
   const [error, setError] = useState<string | null>(null);
 
   const onJoin = async () => {
-    const trimmed = code.trim();
-    if (!trimmed) {
+    const entered = normalizeInviteCode(code);
+    if (!entered) {
       setError('Paste the invite code.');
       return;
     }
-    if (!INVITE_CODE_SHAPE.test(trimmed)) {
+    if (!INVITE_CODE_SHAPE.test(entered)) {
       setError('That doesn’t look like an invite code.');
       return;
     }
     setBusy(true);
     setError(null);
-    // Server perms hide a home from non-members (households.view = isMember), so
-    // we CANNOT read it before joining — a preflight query would always come
-    // back empty and the join would deadlock. Instead: join first, then confirm
-    // the home is real, and roll the membership back if the code was bogus.
-    const membershipId = id();
     try {
+      // ruleParams lets a non-member see exactly the one home whose code this
+      // is (the households.view rule). So we can look it up FIRST, then join —
+      // no blind join + rollback dance.
+      const { data } = await db.queryOnce(
+        { households: { $: { where: { inviteCode: entered } } } },
+        { ruleParams: { code: entered } },
+      );
+      const home = data.households[0];
+      if (!home) {
+        setError('No home found for that code.');
+        return;
+      }
       await db.transact(
-        db.tx.memberships[membershipId]
+        db.tx.memberships[id()]
           .update({
             role: 'member',
             status: 'active',
@@ -252,29 +267,15 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
             displayName: userName,
             joinedAt: Date.now(),
           })
-          .link({ household: trimmed, user: userId }),
+          .link({ household: home.id, user: userId }),
       );
-      const { data } = await db.queryOnce({
-        households: { $: { where: { id: trimmed } } },
-      });
-      if (!data.households[0]) {
-        await db.transact(db.tx.memberships[membershipId].delete());
-        setError('No home found for that code.');
-        return;
-      }
       await logActivity({
-        householdId: trimmed,
+        householdId: home.id,
         actorId: userId,
         actorName: userName,
         type: 'member_joined',
       });
     } catch {
-      // Best-effort rollback so a failed join leaves no orphan membership.
-      try {
-        await db.transact(db.tx.memberships[membershipId].delete());
-      } catch {
-        // ignore — nothing better we can do here
-      }
       setError('Could not join. Check the code and try again.');
     } finally {
       setBusy(false);
@@ -304,6 +305,7 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
 function HouseholdHome({
   name,
   role,
+  householdId,
   code,
   membershipId,
   userId,
@@ -313,6 +315,7 @@ function HouseholdHome({
 }: {
   name: string;
   role: string;
+  householdId: string;
   code: string;
   membershipId: string;
   userId: string;
@@ -341,7 +344,7 @@ function HouseholdHome({
               // Log BEFORE deleting the row — once it's gone we're no longer a
               // member and the activity write would be denied by perms.
               await logActivity({
-                householdId: code,
+                householdId,
                 actorId: userId,
                 actorName: userName,
                 type: 'member_left',
@@ -378,7 +381,7 @@ function HouseholdHome({
         </Hero>
 
         <View style={styles.homeBody}>
-          <BrainInput householdId={code} userId={userId} userName={userName} />
+          <BrainInput householdId={householdId} userId={userId} userName={userName} />
 
           <Card pad>
             <Text style={styles.inviteLabel}>Invite code — share with your roommates</Text>
@@ -396,7 +399,7 @@ function HouseholdHome({
           <View style={styles.section}>
             <SectionHead title="House activity" right={<Count>recent</Count>} />
             <Card>
-              <ActivityFeed householdId={code} />
+              <ActivityFeed householdId={householdId} />
             </Card>
           </View>
 
@@ -485,7 +488,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   inviteLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
-  inviteCode: { fontSize: 13, color: Roomie.ink, fontFamily: RoomieFonts.bodyBold },
+  inviteCode: {
+    fontSize: 32,
+    color: Roomie.forestInk,
+    fontFamily: RoomieFonts.displayBold,
+    letterSpacing: 4,
+    marginTop: 4,
+    marginBottom: 4,
+  },
   copyButton: {
     marginTop: 8,
     alignSelf: 'flex-start',

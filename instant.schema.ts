@@ -25,6 +25,11 @@ const _schema = i.schema({
     // A shared home. The unit everything else hangs off of.
     households: i.entity({
       name: i.string(),
+      // Short human-shareable join code (e.g. "RZ7K2P"). Optional because
+      // pre-migration homes predate it (backfilled on first view). Knowing the
+      // code is what lets a non-member find + join the home — see the
+      // households.view rule (isMember || inviteCode == ruleParams.code).
+      inviteCode: i.string().optional().indexed(),
       // Denormalized creator auth id. The `creator` LINK can't be read by a
       // create permission (the link is born in the same transaction), so the
       // create rule checks this plain field instead. See instant.perms.ts.

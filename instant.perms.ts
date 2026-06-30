@@ -56,7 +56,11 @@ const rules = {
   // A home. Members see it; the creator owns destructive actions.
   households: {
     allow: {
-      view: 'isMember',
+      // Members see their home. A NON-member can see exactly one home: the one
+      // whose inviteCode matches the code they pass as a query ruleParam. No
+      // ruleParam (or a wrong code) → only `isMember` applies, so a stranger
+      // can't enumerate or read homes — they must already know the code.
+      view: "isMember || data.inviteCode == ruleParams.code",
       // create can't read the `creator` link (born in the same transaction),
       // so it checks the denormalized creatorId field instead.
       create: 'auth.id != null && auth.id == data.creatorId',
