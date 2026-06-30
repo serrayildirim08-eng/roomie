@@ -41,8 +41,16 @@ import { logActivity, timeAgo } from '@/features/activity/activity';
 import { nowMs } from '@/features/money/money-logic';
 import { db } from '@/lib/db';
 
+import {
+  EFFORTS,
+  areaLabel,
+  choreSoftState,
+  effortLabel,
+  inferAreaFromGroup,
+  softStateLabel,
+} from './chore-state';
 import { effectiveTurn, nextTurn } from './rotation';
-import { CHORE_LIBRARY } from './starter';
+import { CHORE_LIBRARY, cadenceFromHint } from './starter';
 
 // "vfya+clerk_test@example.com" → "vfya"
 function emailName(email?: string): string | undefined {
@@ -55,10 +63,12 @@ function emailName(email?: string): string | undefined {
 function SwipeRow({
   children,
   onPass,
+  onSnooze,
   onRemove,
 }: {
   children: ReactNode;
   onPass?: () => void;
+  onSnooze?: () => void;
   onRemove: () => void;
 }) {
   const ref = useRef<SwipeableMethods>(null);
@@ -70,6 +80,17 @@ function SwipeRow({
       overshootRight={false}
       renderRightActions={() => (
         <View style={styles.actions}>
+          {onSnooze ? (
+            <Pressable
+              style={[styles.action, styles.actSnooze]}
+              onPress={() => {
+                ref.current?.close();
+                onSnooze();
+              }}
+            >
+              <Text style={styles.actSnoozeLabel}>Tomorrow</Text>
+            </Pressable>
+          ) : null}
           {onPass ? (
             <Pressable
               style={[styles.action, styles.actPass]}
@@ -110,6 +131,93 @@ function DoneButton({ onPress }: { onPress: () => void }) {
     >
       <Text style={styles.doneLabel}>Done ✓</Text>
     </Pressable>
+  );
+}
+
+// One chore's quiet history, lifted into a real component so the optional
+// extras (effort chips + "what counts as done" note) can hold their own draft
+// state without breaking the rules of hooks. All of it is optional — a chore
+// with no effort and no note still just shows its history.
+type ChoreEventLite = {
+  id: string;
+  type: string;
+  at: number | string;
+  by?: { id?: string | null } | null;
+};
+
+function ChoreDetail({
+  choreId,
+  doneNote,
+  effort,
+  events,
+  userId,
+  nameById,
+}: {
+  choreId: string;
+  doneNote?: string | null;
+  effort?: string | null;
+  events: ChoreEventLite[];
+  userId: string;
+  nameById: Record<string, string>;
+}) {
+  const [note, setNote] = useState(doneNote ?? '');
+
+  // Only write when the text actually changed — avoids a no-op transaction on
+  // every blur.
+  const saveNote = () => {
+    const trimmed = note.trim();
+    if (trimmed === (doneNote ?? '')) return;
+    void db.transact(db.tx.chores[choreId].update({ doneNote: trimmed }));
+  };
+  const setEffort = (e: string) => {
+    void db.transact(db.tx.chores[choreId].update({ effort: e }));
+  };
+
+  return (
+    <View style={styles.history}>
+      <Text style={styles.detailLabel}>How big is this?</Text>
+      <View style={styles.effortRow}>
+        {EFFORTS.map((e) => {
+          const on = effort === e;
+          return (
+            <Pressable
+              key={e}
+              style={[styles.effortChip, on && styles.effortChipOn]}
+              onPress={() => setEffort(e)}
+            >
+              <Text style={[styles.effortChipLabel, on && styles.effortChipLabelOn]}>
+                {effortLabel(e)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <TextInput
+        style={styles.noteInput}
+        placeholder="What counts as done? (optional)"
+        placeholderTextColor={Roomie.sub}
+        value={note}
+        onChangeText={setNote}
+        onBlur={saveNote}
+        onSubmitEditing={saveNote}
+        returnKeyType="done"
+      />
+
+      {events.length === 0 ? (
+        <Text style={styles.historyEmpty}>No history yet.</Text>
+      ) : (
+        events.map((ev) => (
+          <View key={ev.id} style={styles.historyRow}>
+            <Text style={styles.historyText}>
+              {ev.by?.id === userId ? 'You' : (nameById[ev.by?.id ?? ''] ?? 'Someone')}{' '}
+              {ev.type === 'done' ? 'did it' : 'passed'}
+            </Text>
+            <Text style={styles.historyTime}>{timeAgo(Number(ev.at))}</Text>
+          </View>
+        ))
+      )}
+    </View>
   );
 }
 
@@ -191,12 +299,22 @@ export function TasksScreen({ userId }: { userId: string }) {
     chores: g.chores.filter((s) => !choreNamesLower.has(s.name.toLowerCase())),
   })).filter((g) => g.chores.length > 0);
 
-  const onAddSuggestion = async (name: string) => {
+  const onAddSuggestion = async (name: string, group: string, hint: string) => {
     const ts = nowMs();
+    // Library rows know their room + a soft cadence; both are optional and only
+    // ever help (a missing cadence simply means "no due signal"). Typed-by-hand
+    // chores skip this path entirely, so they stay signal-free.
+    const cadenceDays = cadenceFromHint(hint);
+    const fields: {
+      name: string;
+      createdAt: number;
+      updatedAt: number;
+      area: string;
+      cadenceDays?: number;
+    } = { name, createdAt: ts, updatedAt: ts, area: inferAreaFromGroup(group) };
+    if (cadenceDays != null) fields.cadenceDays = cadenceDays;
     await db.transact(
-      db.tx.chores[id()]
-        .update({ name, createdAt: ts, updatedAt: ts })
-        .link({ household: household.id, turn: userId }),
+      db.tx.chores[id()].update(fields).link({ household: household.id, turn: userId }),
     );
     await logActivity({
       householdId: household.id,
@@ -288,22 +406,69 @@ export function TasksScreen({ userId }: { userId: string }) {
     })();
   };
 
+  // Gentle "move to tomorrow" — a soft pause, never a skip. The turn stays put
+  // (snooze is about timing, not fairness), so whoever holds it still holds it.
+  const onSnoozeChore = (choreId: string) => {
+    void db.transact(db.tx.chores[choreId].update({ snoozedUntil: nowMs() + 86_400_000 }));
+  };
+
   const renderChore = (chore: (typeof chores)[number]) => {
     const holderId = effectiveTurn(memberIds, chore.turn?.id);
     const mine = holderId === userId;
     const open = openChoreId === chore.id;
     const events = chore.events ?? [];
+
+    // Soft state hint — quiet, optional, and silent unless the chore has a
+    // cadence (or is resting). "all_good" shows nothing: no news is good news.
+    const lastEventAt = events[0]?.at;
+    const lastActivityAtMs = lastEventAt != null ? Number(lastEventAt) : Number(chore.createdAt);
+    const snoozedUntilMs = chore.snoozedUntil != null ? Number(chore.snoozedUntil) : null;
+    const state = choreSoftState({
+      cadenceDays: chore.cadenceDays,
+      lastActivityAtMs,
+      snoozedUntilMs,
+      nowMs: nowMs(),
+    });
+    const snoozed = state === 'snoozed';
+    const hint = state !== 'all_good' ? softStateLabel(state) : null;
+    const areaPill = areaLabel(chore.area);
+    const effortPill = effortLabel(chore.effort);
+    const hasPills = !!hint || !!areaPill || !!effortPill;
+
     return (
       <SwipeRow
         key={chore.id}
         onPass={mine ? () => advance(chore.id, chore.name, holderId, 'pass') : undefined}
+        onSnooze={mine ? () => onSnoozeChore(chore.id) : undefined}
         onRemove={() => onDeleteChore(chore.id, chore.name)}
       >
-        <View style={styles.choreCard}>
+        <View style={[styles.choreCard, snoozed && styles.choreCardResting]}>
           <Pressable style={styles.choreRow} onPress={() => setOpenChoreId(open ? null : chore.id)}>
             <View style={[styles.turnBar, mine ? styles.turnBarMine : styles.turnBarOther]} />
             <View style={styles.choreNameWrap}>
               <Text style={styles.choreName}>{chore.name}</Text>
+              {hasPills ? (
+                <View style={styles.pillRow}>
+                  {hint ? (
+                    <Text
+                      style={[
+                        styles.pill,
+                        snoozed
+                          ? styles.pillRest
+                          : state === 'needs_attention'
+                            ? styles.pillAttention
+                            : styles.pillSoon,
+                      ]}
+                    >
+                      {hint}
+                    </Text>
+                  ) : null}
+                  {areaPill ? <Text style={[styles.pill, styles.pillNeutral]}>{areaPill}</Text> : null}
+                  {effortPill ? (
+                    <Text style={[styles.pill, styles.pillNeutral]}>{effortPill}</Text>
+                  ) : null}
+                </View>
+              ) : null}
               {!mine ? (
                 <Text style={styles.choreSub}>
                   {nameById[holderId ?? ''] ?? 'someone'}’s turn
@@ -314,21 +479,14 @@ export function TasksScreen({ userId }: { userId: string }) {
           </Pressable>
 
           {open ? (
-            <View style={styles.history}>
-              {events.length === 0 ? (
-                <Text style={styles.historyEmpty}>No history yet.</Text>
-              ) : (
-                events.map((ev) => (
-                  <View key={ev.id} style={styles.historyRow}>
-                    <Text style={styles.historyText}>
-                      {ev.by?.id === userId ? 'You' : (nameById[ev.by?.id ?? ''] ?? 'Someone')}{' '}
-                      {ev.type === 'done' ? 'did it' : 'passed'}
-                    </Text>
-                    <Text style={styles.historyTime}>{timeAgo(Number(ev.at))}</Text>
-                  </View>
-                ))
-              )}
-            </View>
+            <ChoreDetail
+              choreId={chore.id}
+              doneNote={chore.doneNote}
+              effort={chore.effort}
+              events={events}
+              userId={userId}
+              nameById={nameById}
+            />
           ) : null}
         </View>
       </SwipeRow>
@@ -416,7 +574,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                       <Pressable
                         key={s.name}
                         style={styles.libRow}
-                        onPress={() => onAddSuggestion(s.name)}
+                        onPress={() => onAddSuggestion(s.name, g.group, s.hint)}
                       >
                         <Text style={styles.libName}>+ {s.name}</Text>
                         <Text style={styles.libHint}>{s.hint}</Text>
@@ -488,6 +646,22 @@ const styles = StyleSheet.create({
   choreNameWrap: { flex: 1 },
   choreName: { fontSize: 16, fontFamily: RoomieFonts.display, color: Roomie.ink },
   choreSub: { fontSize: 11.5, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink3, marginTop: 1 },
+  // a chore that's resting sits a touch quieter — never hidden, never harsh
+  choreCardResting: { opacity: 0.62 },
+  // tiny quiet pills under the name (soft state / area / effort) — all optional
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 4 },
+  pill: {
+    fontSize: 10.5,
+    fontFamily: RoomieFonts.bodyBold,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 7,
+    overflow: 'hidden',
+  },
+  pillSoon: { backgroundColor: Roomie.sageSoft, color: Roomie.forest },
+  pillAttention: { backgroundColor: '#FBEFD0', color: '#8A6A12' },
+  pillRest: { backgroundColor: Roomie.hairline, color: Roomie.sub },
+  pillNeutral: { backgroundColor: '#F0EDE4', color: Roomie.sub },
   done: {
     backgroundColor: Roomie.sage,
     borderRadius: 14,
@@ -506,6 +680,8 @@ const styles = StyleSheet.create({
   action: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 18, borderRadius: 18 },
   actPass: { backgroundColor: Roomie.gold, marginRight: 8 },
   actPassLabel: { fontFamily: RoomieFonts.bodyBold, fontSize: 14, color: Roomie.forestInk },
+  actSnooze: { backgroundColor: Roomie.sageSoft, marginRight: 8 },
+  actSnoozeLabel: { fontFamily: RoomieFonts.bodyBold, fontSize: 14, color: Roomie.forest },
   actRemove: { backgroundColor: Roomie.danger },
   actRemoveLabel: { fontFamily: RoomieFonts.bodyBold, fontSize: 14, color: '#fff' },
   history: {
@@ -515,6 +691,32 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   historyEmpty: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.sub },
+  // expanded detail extras — effort chips + "what counts as done" note
+  detailLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub, marginBottom: 2 },
+  effortRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 6 },
+  effortChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.card,
+  },
+  effortChipOn: { backgroundColor: Roomie.sageSoft, borderColor: Roomie.forest },
+  effortChipLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
+  effortChipLabelOn: { color: Roomie.forest },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: RoomieFonts.body,
+    color: Roomie.ink,
+    marginBottom: 8,
+  },
   historyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
   historyText: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   historyTime: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.ink3 },

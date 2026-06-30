@@ -35,6 +35,7 @@ import { ActivityFeed } from '@/features/activity/activity-feed';
 import { BrainInput } from '@/features/brain/brain-input';
 import { HomePulse } from '@/features/home/home-pulse';
 import { TinyWins } from '@/features/home/tiny-wins';
+import { WeeklyRecap } from '@/features/home/weekly-recap';
 
 import { STARTER_PACKS, type HomeType } from '@/features/tasks/starter';
 
@@ -413,6 +414,8 @@ function HouseholdHome({
           <HomePulse householdId={householdId} userId={userId} />
 
           <TinyWins householdId={householdId} userId={userId} />
+
+          <WeeklyRecap householdId={householdId} />
 
           <Card pad style={styles.inviteCard}>
             <Text style={styles.inviteLabel}>Invite code — share with your roommates</Text>

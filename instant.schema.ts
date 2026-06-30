@@ -99,6 +99,11 @@ const _schema = i.schema({
     // `turn` link; rotation order is membership join order.
     chores: i.entity({
       name: i.string(),
+      area: i.string().optional(), // 'kitchen'|'bathroom'|'living'|'trash'|'admin'|'supplies'|'other'
+      effort: i.string().optional(), // 'tiny'|'normal'|'big'
+      doneNote: i.string().optional(), // optional "what counts as done"
+      cadenceDays: i.number().optional(), // optional soft cadence; unset = no due signal
+      snoozedUntil: i.date().optional(), // ms timestamp; soft "resting until"
       createdAt: i.date().indexed(),
       updatedAt: i.date().indexed(),
     }),

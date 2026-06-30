@@ -12,6 +12,25 @@ export interface SuggestedChore {
   hint: string; // typical cadence, faint copy only
 }
 
+// Soft cadence (in days) derived from a library hint string. Library-added
+// chores get a gentle "due signal" cadence; anything we can't map (collection
+// day / when full / as needed) stays undefined → no signal at all, by design.
+// Manually-typed chores never pass through here, so they stay signal-free too.
+export function cadenceFromHint(hint?: string): number | undefined {
+  switch (hint) {
+    case 'daily':
+      return 1;
+    case 'weekly':
+      return 7;
+    case 'every 2 weeks':
+      return 14;
+    case 'monthly':
+      return 30;
+    default:
+      return undefined;
+  }
+}
+
 export interface ChoreGroup {
   group: string;
   chores: SuggestedChore[];
