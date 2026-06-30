@@ -366,7 +366,7 @@ export function MoneyScreen({ userId }: { userId: string }) {
                           onPress={() => onSettle(d.toId, d.amountCents)}
                           disabled={settling}
                         >
-                          <Text style={styles.settlePinkLabel}>Settle</Text>
+                          <Text style={styles.settlePinkLabel}>Settle up</Text>
                         </Pressable>
                       ) : null}
                     </View>
@@ -380,7 +380,7 @@ export function MoneyScreen({ userId }: { userId: string }) {
             <SectionHead title="Recent expenses" />
             {recentExpenses.length === 0 ? (
               <Card pad>
-                <Text style={styles.muted}>Nothing yet.</Text>
+                <Text style={styles.muted}>Nothing logged yet.</Text>
               </Card>
             ) : (
               <Card>

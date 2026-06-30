@@ -78,7 +78,7 @@ export function GroceryScan({
   const [phase, setPhase] = useState<'scan' | 'review'>('scan');
   const [lines, setLines] = useState<ScanLine[]>([]);
   const [looking, setLooking] = useState(false);
-  const [manual, setManual] = useState<{ barcode?: string } | null>(null);
+  const [manual, setManual] = useState<{ barcode?: string; editKey?: string } | null>(null);
   const [manualName, setManualName] = useState('');
   const [total, setTotal] = useState('');
   const [payerId, setPayerId] = useState(userId);
@@ -117,7 +117,16 @@ export function GroceryScan({
   const addByBarcode = useCallback(
     async (code: string) => {
       setLooking(true);
-      const product = await lookupBarcode(code);
+      // Cap the lookup at ~6s — a stalled network shouldn't freeze the scanner.
+      // On abort lookupBarcode resolves null, which opens the manual sheet below.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+      let product;
+      try {
+        product = await lookupBarcode(code, controller.signal);
+      } finally {
+        clearTimeout(timer);
+      }
       setLooking(false);
       if (!product) {
         setManualName('');
@@ -152,13 +161,32 @@ export function GroceryScan({
     const typed = manualName.trim();
     if (!typed) return;
     const r = resolveItem(typed);
-    addLine({
-      name: r.name,
-      normalizedName: r.normalizedName,
-      category: r.category,
-      shelfLifeDays: r.shelfLifeDays,
-      barcode: manual?.barcode,
-    });
+    if (manual?.editKey) {
+      // Rename an existing line — re-derive the normalized fields so a hand-typed
+      // name stays as consistent as a scanned one. Keep its key and barcode.
+      const editKey = manual.editKey;
+      setLines((prev) =>
+        prev.map((l) =>
+          l.key === editKey
+            ? {
+                ...l,
+                name: r.name,
+                normalizedName: r.normalizedName,
+                category: r.category,
+                shelfLifeDays: r.shelfLifeDays,
+              }
+            : l,
+        ),
+      );
+    } else {
+      addLine({
+        name: r.name,
+        normalizedName: r.normalizedName,
+        category: r.category,
+        shelfLifeDays: r.shelfLifeDays,
+        barcode: manual?.barcode,
+      });
+    }
     setManual(null);
     setManualName('');
   }, [manualName, manual, addLine]);
@@ -312,9 +340,18 @@ export function GroceryScan({
                     {lines.map((l, idx) => (
                       <View key={l.key} style={[styles.row, idx > 0 && styles.rowDivided]}>
                         <Text style={styles.rowEmoji}>{itemEmoji(l.name, l.category)}</Text>
-                        <Text style={styles.rowName} numberOfLines={1}>
-                          {l.name}
-                        </Text>
+                        <Pressable
+                          style={styles.rowNameWrap}
+                          hitSlop={6}
+                          onPress={() => {
+                            setManualName(l.name);
+                            setManual({ editKey: l.key });
+                          }}
+                        >
+                          <Text style={styles.rowName} numberOfLines={1}>
+                            {l.name}
+                          </Text>
+                        </Pressable>
                         <Pressable onPress={() => removeLine(l.key)} hitSlop={8} style={styles.del}>
                           <Text style={styles.delX}>✕</Text>
                         </Pressable>
@@ -443,12 +480,18 @@ export function GroceryScan({
             <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
               <View style={styles.grab} />
               <Text style={styles.sheetTitle}>
-                {manual.barcode ? "Couldn't find that one 🤔" : 'Add by name'}
+                {manual.editKey
+                  ? 'Rename'
+                  : manual.barcode
+                    ? "Couldn't find that one 🤔"
+                    : 'Add by name'}
               </Text>
               <Text style={styles.sheetLede}>
-                {manual.barcode
-                  ? 'Barcode not recognised — type the name and it joins the list.'
-                  : 'No barcode? Type the name (produce, bakery…).'}
+                {manual.editKey
+                  ? 'Type a new name for this item.'
+                  : manual.barcode
+                    ? 'Barcode not recognised — type the name and it joins the list.'
+                    : 'No barcode? Type the name (produce, bakery…).'}
               </Text>
               <TextInput
                 style={[styles.input, { marginTop: 12 }]}
@@ -461,7 +504,11 @@ export function GroceryScan({
                 autoFocus
               />
               <View style={{ marginTop: 14 }}>
-                <ChunkyButton label="Add" disabled={!manualName.trim()} onPress={submitManual} />
+                <ChunkyButton
+                  label={manual.editKey ? 'Save' : 'Add'}
+                  disabled={!manualName.trim()}
+                  onPress={submitManual}
+                />
               </View>
             </View>
           </View>
@@ -530,7 +577,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16 },
   rowDivided: { borderTopWidth: 1, borderTopColor: Roomie.rule },
   rowEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
-  rowName: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.display, color: Roomie.ink },
+  rowNameWrap: { flex: 1 },
+  rowName: { fontSize: 15, fontFamily: RoomieFonts.display, color: Roomie.ink },
   del: { padding: 6 },
   delX: { fontSize: 15, color: Roomie.danger },
   muted: { fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.sub },

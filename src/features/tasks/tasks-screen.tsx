@@ -9,7 +9,7 @@
 // turn advances). Pass is turn-holder-only and penalty-free. Tap a chore →
 // quiet chronological history. No counts, no points, no streaks, ever.
 //
-// New homes come preloaded with four classic chores (seeded at creation,
+// New homes come preloaded with five classic chores (seeded at creation,
 // removable like any other). Whoever ADDS a chore takes its first turn.
 
 import { id } from '@instantdb/react-native';
@@ -95,6 +95,21 @@ function SwipeRow({
     >
       {children}
     </ReanimatedSwipeable>
+  );
+}
+
+// "Done ✓" with a single quiet touch: a soft scale dip on press, then it
+// settles. That's the whole reward — no confetti, no counter, no badge. Just a
+// small, adult acknowledgement that the tap landed. The turn advances
+// elsewhere; this stays purely transient.
+function DoneButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.done, pressed && styles.donePressed]}
+    >
+      <Text style={styles.doneLabel}>Done ✓</Text>
+    </Pressable>
   );
 }
 
@@ -295,12 +310,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                 </Text>
               ) : null}
             </View>
-            <Pressable
-              style={styles.done}
-              onPress={() => advance(chore.id, chore.name, holderId, 'done')}
-            >
-              <Text style={styles.doneLabel}>Done ✓</Text>
-            </Pressable>
+            <DoneButton onPress={() => advance(chore.id, chore.name, holderId, 'done')} />
           </Pressable>
 
           {open ? (
@@ -345,9 +355,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                   <View style={styles.choreRow}>
                     <View style={[styles.turnBar, styles.turnBarMine]} />
                     <Text style={[styles.choreName, styles.choreNameWrap]}>{t.title}</Text>
-                    <Pressable style={styles.done} onPress={() => onMineDone(t.id)}>
-                      <Text style={styles.doneLabel}>Done ✓</Text>
-                    </Pressable>
+                    <DoneButton onPress={() => onMineDone(t.id)} />
                   </View>
                 </View>
               </SwipeRow>
@@ -490,6 +498,7 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 3 },
   },
+  donePressed: { transform: [{ scale: 0.94 }], opacity: 0.92 },
   doneLabel: { color: Roomie.onAccent, fontSize: 14, fontFamily: RoomieFonts.bodyBold },
   mineCard: {},
   // swipe-revealed actions
