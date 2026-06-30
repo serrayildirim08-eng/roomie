@@ -33,6 +33,7 @@ import { db } from '@/lib/db';
 import { logActivity } from '@/features/activity/activity';
 import { ActivityFeed } from '@/features/activity/activity-feed';
 import { BrainInput } from '@/features/brain/brain-input';
+import { HomePulse } from '@/features/home/home-pulse';
 
 import { STARTER_CHORES } from '@/features/tasks/starter';
 
@@ -382,6 +383,8 @@ function HouseholdHome({
 
         <View style={styles.homeBody}>
           <BrainInput householdId={householdId} userId={userId} userName={userName} />
+
+          <HomePulse householdId={householdId} userId={userId} />
 
           <Card pad style={styles.inviteCard}>
             <Text style={styles.inviteLabel}>Invite code — share with your roommates</Text>

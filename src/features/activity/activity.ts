@@ -115,7 +115,7 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
     }
     case 'chore_done': {
       const chore = metaString(metadata, 'chore');
-      return { icon: '✨', text: `${who} did ${chore ?? 'a chore'}` };
+      return { icon: '✨', text: `${who} handled ${chore ?? 'a chore'}` };
     }
     case 'chore_passed': {
       const chore = metaString(metadata, 'chore');

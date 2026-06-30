@@ -9,7 +9,7 @@
 // Aging is a quiet faded dot — never a count, never shame.
 
 import { id } from '@instantdb/react-native';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -65,6 +66,15 @@ export function KitchenScreen({ userId }: { userId: string }) {
   // Money bridge: when set, we just restocked this item and offer "Add to Money?"
   const [bridge, setBridge] = useState<{ itemName: string } | null>(null);
   const [bridgeAmount, setBridgeAmount] = useState('');
+  // A quiet, transient "you got it" whisper — never a tally, just a soft ack.
+  const [whisper, setWhisper] = useState<string | null>(null);
+  const whisperTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (whisperTimer.current) clearTimeout(whisperTimer.current);
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -198,6 +208,10 @@ export function KitchenScreen({ userId }: { userId: string }) {
       type: 'pantry_got',
       metadata: { item: itemName },
     });
+    // Calm, transient ack — fades on its own; the Money hop still pops below.
+    if (whisperTimer.current) clearTimeout(whisperTimer.current);
+    setWhisper('Got it — house remembers.');
+    whisperTimer.current = setTimeout(() => setWhisper(null), 1600);
     setBridgeAmount('');
     setBridge({ itemName }); // offer the Money hop
   };
@@ -392,6 +406,17 @@ export function KitchenScreen({ userId }: { userId: string }) {
         </View>
       </ScrollView>
 
+      {whisper ? (
+        <Animated.View
+          entering={FadeIn.duration(220)}
+          exiting={FadeOut.duration(460)}
+          style={styles.whisper}
+          pointerEvents="none"
+        >
+          <Text style={styles.whisperText}>{whisper}</Text>
+        </Animated.View>
+      ) : null}
+
       <GroceryScan
         visible={scanning}
         onClose={() => setScanning(false)}
@@ -495,4 +520,15 @@ const styles = StyleSheet.create({
   claimedNote: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sage },
   delete: { padding: 6 },
   deleteLabel: { fontSize: 15, color: Roomie.danger },
+  whisper: { position: 'absolute', left: 0, right: 0, bottom: 100, alignItems: 'center' },
+  whisperText: {
+    backgroundColor: Roomie.sageSoft,
+    color: Roomie.sage,
+    fontSize: 13,
+    fontFamily: RoomieFonts.bodySemi,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
 });
