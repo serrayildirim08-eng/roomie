@@ -383,7 +383,7 @@ function HouseholdHome({
         <View style={styles.homeBody}>
           <BrainInput householdId={householdId} userId={userId} userName={userName} />
 
-          <Card pad>
+          <Card pad style={styles.inviteCard}>
             <Text style={styles.inviteLabel}>Invite code — share with your roommates</Text>
             <Text style={styles.inviteCode} selectable>
               {code}
@@ -487,11 +487,13 @@ const styles = StyleSheet.create({
     borderColor: Roomie.hairline,
     gap: 6,
   },
-  inviteLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
+  inviteCard: { alignItems: 'center' },
+  inviteLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub, textAlign: 'center' },
   inviteCode: {
     fontSize: 32,
     color: Roomie.forestInk,
     fontFamily: RoomieFonts.displayBold,
+    textAlign: 'center',
     letterSpacing: 4,
     marginTop: 4,
     marginBottom: 4,
@@ -515,7 +517,7 @@ const styles = StyleSheet.create({
   homeScroll: { paddingBottom: 120 }, // clears the native tab bar (was hidden)
   homeBody: { padding: 18, gap: 16 },
   section: { gap: 11 },
-  copyChunky: { marginTop: 12, alignSelf: 'flex-start', minWidth: 150 },
+  copyChunky: { marginTop: 12, alignSelf: 'center', minWidth: 150 },
   homeFooter: { flexDirection: 'row', gap: 18, marginTop: 4 },
 
   // No-household (create / join) screen.
