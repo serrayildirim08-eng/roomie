@@ -381,22 +381,44 @@ export function KitchenScreen({ userId }: { userId: string }) {
                 {inPantry.map((it, idx) => {
                   const age = ageOf(Number(it.addedAt), it.shelfLifeDays ?? null, now);
                   const aging = age !== 'fresh';
+                  const askStillHere = age === 'still_here_prompt';
                   return (
-                    <View key={it.id} style={[styles.row, idx > 0 && styles.rowDivided]}>
-                      <Text style={styles.rowEmoji}>{itemEmoji(it.name, it.category)}</Text>
-                      <Text style={[styles.rowName, aging && styles.rowNameAging]}>{it.name}</Text>
-                      {aging ? <View style={styles.agingDot} /> : null}
-                      <Pressable style={styles.outButton} onPress={() => onOut(it.id, it.name)}>
-                        <Text style={styles.outLabel}>Out</Text>
-                      </Pressable>
-                      <Pressable
-                        style={styles.delete}
-                        onPress={() => onDelete(it.id, it.name)}
-                        hitSlop={8}
-                        accessibilityLabel={`Remove ${it.name}`}
-                      >
-                        <Text style={styles.deleteLabel}>✕</Text>
-                      </Pressable>
+                    <View key={it.id} style={idx > 0 && styles.rowDivided}>
+                      <View style={styles.row}>
+                        <Text style={styles.rowEmoji}>{itemEmoji(it.name, it.category)}</Text>
+                        <Text style={[styles.rowName, aging && styles.rowNameAging]}>{it.name}</Text>
+                        {aging && !askStillHere ? <View style={styles.agingDot} /> : null}
+                        <Pressable style={styles.outButton} onPress={() => onOut(it.id, it.name)}>
+                          <Text style={styles.outLabel}>Out</Text>
+                        </Pressable>
+                        <Pressable
+                          style={styles.delete}
+                          onPress={() => onDelete(it.id, it.name)}
+                          hitSlop={8}
+                          accessibilityLabel={`Remove ${it.name}`}
+                        >
+                          <Text style={styles.deleteLabel}>✕</Text>
+                        </Pressable>
+                      </View>
+                      {askStillHere ? (
+                        <View style={styles.stillHere}>
+                          <Text style={styles.stillHereText}>Still need this?</Text>
+                          <Pressable
+                            style={styles.stillYes}
+                            onPress={() => {
+                              const ts = nowMs();
+                              void db.transact(
+                                db.tx.pantryItems[it.id].update({ addedAt: ts, updatedAt: ts }),
+                              );
+                            }}
+                          >
+                            <Text style={styles.stillYesLabel}>Yes</Text>
+                          </Pressable>
+                          <Pressable style={styles.stillOut} onPress={() => onOut(it.id, it.name)}>
+                            <Text style={styles.stillOutLabel}>Out</Text>
+                          </Pressable>
+                        </View>
+                      ) : null}
                     </View>
                   );
                 })}
@@ -494,6 +516,26 @@ const styles = StyleSheet.create({
   rowName: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.display, color: Roomie.ink },
   rowNameAging: { color: Roomie.sub },
   agingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Roomie.gold },
+  stillHere: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 13,
+    marginTop: -4,
+  },
+  stillHereText: { flex: 1, fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.sub },
+  stillYes: {
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 13,
+  },
+  stillYesLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  stillOut: { borderRadius: 12, paddingVertical: 6, paddingHorizontal: 13 },
+  stillOutLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
   outButton: {
     borderWidth: 1,
     borderColor: Roomie.hairline,

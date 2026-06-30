@@ -30,25 +30,62 @@ export function ActivityFeed({ householdId }: { householdId: string }) {
     return <Text style={styles.muted}>Quiet so far. 🌿</Text>;
   }
 
+  // Calm, house-focused grouping: anything since the start of the local day sits
+  // under "Today at home", the rest under "Earlier". No ranking, no per-person
+  // tallies — just a gentle sense of when.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todayStart = startOfToday.getTime();
+
+  const today: typeof events = [];
+  const earlier: typeof events = [];
+  for (const event of events) {
+    (Number(event.createdAt) >= todayStart ? today : earlier).push(event);
+  }
+
+  const renderRow = (event: (typeof events)[number], idx: number) => {
+    const { icon, text } = describeEvent(event.type, event.metadata);
+    return (
+      <View key={event.id} style={[styles.row, idx > 0 && styles.rowDivided]}>
+        <View style={styles.iconChip}>
+          <Text style={styles.icon}>{icon}</Text>
+        </View>
+        <Text style={styles.text}>{text}</Text>
+        <Text style={styles.time}>{timeAgo(event.createdAt)}</Text>
+      </View>
+    );
+  };
+
   return (
     <View>
-      {events.map((event, idx) => {
-        const { icon, text } = describeEvent(event.type, event.metadata);
-        return (
-          <View key={event.id} style={[styles.row, idx > 0 && styles.rowDivided]}>
-            <View style={styles.iconChip}>
-              <Text style={styles.icon}>{icon}</Text>
-            </View>
-            <Text style={styles.text}>{text}</Text>
-            <Text style={styles.time}>{timeAgo(event.createdAt)}</Text>
-          </View>
-        );
-      })}
+      {today.length > 0 && (
+        <View>
+          <Text style={styles.groupHead}>Today at home</Text>
+          {today.map(renderRow)}
+        </View>
+      )}
+      {earlier.length > 0 && (
+        <View style={today.length > 0 && styles.groupSpacer}>
+          <Text style={styles.groupHead}>Earlier</Text>
+          {earlier.map(renderRow)}
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  groupHead: {
+    fontFamily: RoomieFonts.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: Roomie.ink3,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  groupSpacer: { marginTop: 6 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, gap: 12 },
   rowDivided: { borderTopWidth: 1, borderTopColor: Roomie.rule },
   iconChip: {

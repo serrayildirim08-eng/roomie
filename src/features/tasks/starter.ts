@@ -17,8 +17,31 @@ export interface ChoreGroup {
   chores: SuggestedChore[];
 }
 
-// Auto-seeded at home creation. Subset of the library below.
-export const STARTER_CHORES = ['Dishes', 'Trash', 'Bathroom', 'Vacuum', 'Mop floors'];
+// Home-type keys for the starter packs below. The chooser at home creation maps
+// these to friendly labels ("2-roommate apartment", "Student flat", …).
+export type HomeType = 'apartment' | 'student' | 'couple' | 'house';
+
+// Starter packs by home type — each is a different opening hand of chores, all
+// drawn from CHORE_LIBRARY/STARTER_CHORES below so suggestions + dedup stay
+// consistent. 'apartment' is the default and reproduces the original 5.
+export const STARTER_PACKS: Record<HomeType, string[]> = {
+  apartment: ['Dishes', 'Trash', 'Bathroom', 'Vacuum', 'Mop floors'],
+  student: ['Dishes', 'Trash', 'Bathroom', 'Vacuum', 'Paper & cardboard'],
+  couple: ['Dishes', 'Trash', 'Bathroom', 'Clean fridge'],
+  house: [
+    'Dishes',
+    'Trash',
+    'Bathroom',
+    'Vacuum',
+    'Mop floors',
+    'Tidy living room',
+    'Paper & cardboard',
+  ],
+};
+
+// Auto-seeded at home creation when no home type is chosen. Subset of the
+// library below; identical to the default 'apartment' pack.
+export const STARTER_CHORES = STARTER_PACKS.apartment;
 
 export const CHORE_LIBRARY: ChoreGroup[] = [
   {

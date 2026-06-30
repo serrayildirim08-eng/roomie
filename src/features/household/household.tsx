@@ -34,12 +34,22 @@ import { logActivity } from '@/features/activity/activity';
 import { ActivityFeed } from '@/features/activity/activity-feed';
 import { BrainInput } from '@/features/brain/brain-input';
 import { HomePulse } from '@/features/home/home-pulse';
+import { TinyWins } from '@/features/home/tiny-wins';
 
-import { STARTER_CHORES } from '@/features/tasks/starter';
+import { STARTER_PACKS, type HomeType } from '@/features/tasks/starter';
 
 import { generateInviteCode, INVITE_CODE_SHAPE, normalizeInviteCode } from './invite-code';
 
 type Roommate = { name: string; seed: string };
+
+// Home-type chips for CreateHousehold — first one is the default and seeds the
+// original five chores, so existing behavior is unchanged unless you pick.
+const HOME_TYPES: { key: HomeType; label: string }[] = [
+  { key: 'apartment', label: '2-roommate apartment' },
+  { key: 'student', label: 'Student flat' },
+  { key: 'couple', label: 'Couple' },
+  { key: 'house', label: '3+ roommate house' },
+];
 
 export function HouseholdGate({
   userId,
@@ -155,6 +165,7 @@ function NoHousehold({
 
 function CreateHousehold({ userId, userName }: { userId: string; userName: string }) {
   const [name, setName] = useState('');
+  const [homeType, setHomeType] = useState<HomeType>('apartment');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -190,9 +201,9 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
           })
           .link({ household: householdId, user: userId }),
       ]);
-      // Now that the membership exists, seed the starter chores quietly.
+      // Now that the membership exists, seed the chosen pack's chores quietly.
       await db.transact(
-        STARTER_CHORES.map((name, idx) =>
+        STARTER_PACKS[homeType].map((name, idx) =>
           db.tx.chores[id()]
             .update({ name, createdAt: now + idx, updatedAt: now + idx })
             .link({ household: householdId, turn: userId }),
@@ -223,6 +234,21 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
         onChangeText={setName}
         autoFocus
       />
+      <Text style={styles.chipHint}>What kind of home? Sets your starting chores.</Text>
+      <View style={styles.chipRow}>
+        {HOME_TYPES.map((t) => {
+          const on = t.key === homeType;
+          return (
+            <Pressable
+              key={t.key}
+              onPress={() => setHomeType(t.key)}
+              style={[styles.chip, on && styles.chipOn]}
+            >
+              <Text style={[styles.chipLabel, on && styles.chipLabelOn]}>{t.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PrimaryButton label="Create home" onPress={onCreate} busy={busy} />
     </View>
@@ -386,6 +412,8 @@ function HouseholdHome({
 
           <HomePulse householdId={householdId} userId={userId} />
 
+          <TinyWins householdId={householdId} userId={userId} />
+
           <Card pad style={styles.inviteCard}>
             <Text style={styles.inviteLabel}>Invite code — share with your roommates</Text>
             <Text style={styles.inviteCode} selectable>
@@ -510,6 +538,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   copyLabel: { color: Roomie.canvas, fontSize: 14, fontFamily: RoomieFonts.bodyBold },
+  chipHint: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.sub, marginTop: 2 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
+  chip: {
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  chipOn: { backgroundColor: Roomie.forest, borderColor: Roomie.forest },
+  chipLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  chipLabelOn: { color: '#fff' },
   leave: { alignSelf: 'flex-start', paddingVertical: 8 },
   leaveLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
   signoutLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.danger },
