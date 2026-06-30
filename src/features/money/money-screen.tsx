@@ -135,6 +135,18 @@ export function MoneyScreen({ userId }: { userId: string }) {
   const balanceText = myNet === 0 ? '€0.00' : `${myNet > 0 ? '+' : '−'}${formatEur(Math.abs(myNet))}`;
   const balanceCap =
     myNet > 0 ? "you're owed overall" : myNet < 0 ? 'you owe overall' : 'all settled up 🤍';
+  // One calm clarity line for the top of the body: my single biggest position,
+  // drawn from the same me-only debts the list below uses (no everyone-totals).
+  const biggest = debts.reduce<(typeof debts)[number] | null>(
+    (max, d) => (max === null || d.amountCents > max.amountCents ? d : max),
+    null,
+  );
+  const clarityLine = !biggest
+    ? "You're all square. 🤍"
+    : biggest.fromId === userId
+      ? `You owe ${nameById[biggest.toId]} ${formatEur(biggest.amountCents)}.`
+      : `${nameById[biggest.fromId]} owes you ${formatEur(biggest.amountCents)}.`;
+
   const owedToYou = debts.filter((d) => d.toId === userId).reduce((s, d) => s + d.amountCents, 0);
   const youOweTotal = debts.filter((d) => d.fromId === userId).reduce((s, d) => s + d.amountCents, 0);
   const loggedTotal = expenses.reduce((s, e) => s + e.amountCents, 0);
@@ -267,6 +279,8 @@ export function MoneyScreen({ userId }: { userId: string }) {
         </Hero>
 
         <View style={styles.body}>
+          <Text style={styles.clarity}>{clarityLine}</Text>
+
           <Card pad style={styles.formCard}>
             <Text style={styles.cardTitle}>Add an expense</Text>
           <TextInput
@@ -437,6 +451,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   heroCap: { fontFamily: RoomieFonts.bodyBold, fontSize: 13.5, color: 'rgba(255,255,255,0.9)', marginTop: 4 },
+  clarity: { fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub, paddingHorizontal: 2 },
   formCard: { gap: 10 },
   cardTitle: { fontSize: 17, fontFamily: RoomieFonts.display, color: Roomie.ink },
   input: {
