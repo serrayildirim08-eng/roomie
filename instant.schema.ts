@@ -25,6 +25,12 @@ const _schema = i.schema({
     // A shared home. The unit everything else hangs off of.
     households: i.entity({
       name: i.string(),
+      // Denormalized creator auth id. The `creator` LINK can't be read by a
+      // create permission (the link is born in the same transaction), so the
+      // create rule checks this plain field instead. See instant.perms.ts.
+      // Optional because pre-migration rows predate the field (they're already
+      // created, so the create rule never re-checks them).
+      creatorId: i.string().optional().indexed(),
       createdAt: i.date().indexed(),
     }),
 
@@ -32,6 +38,11 @@ const _schema = i.schema({
     memberships: i.entity({
       role: i.string(), // 'owner' | 'member'
       status: i.string(), // 'active' | 'invited' | 'removed'
+      // Denormalized owner auth id — the security-critical create check
+      // (`you may only create your OWN membership`) reads this, not the `user`
+      // link, which isn't visible to a create rule in the same transaction.
+      // Optional because pre-migration rows predate the field.
+      userId: i.string().optional().indexed(),
       displayName: i.string().optional(), // denormalized name for member lists
       joinedAt: i.date().indexed(),
     }),

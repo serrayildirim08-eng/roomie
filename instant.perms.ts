@@ -57,7 +57,9 @@ const rules = {
   households: {
     allow: {
       view: 'isMember',
-      create: 'isCreator',
+      // create can't read the `creator` link (born in the same transaction),
+      // so it checks the denormalized creatorId field instead.
+      create: 'auth.id != null && auth.id == data.creatorId',
       update: 'isMember',
       delete: 'isCreator',
     },
@@ -76,7 +78,10 @@ const rules = {
   memberships: {
     allow: {
       view: 'isSelf || isMember',
-      create: 'isSelf',
+      // SECURITY-CRITICAL: you may only create your OWN membership (else a
+      // stranger could join any home / escalate). The `user` link isn't
+      // readable in a create rule, so this checks the denormalized userId.
+      create: 'auth.id != null && auth.id == data.userId',
       update: 'isSelf',
       delete: 'isSelf || isHouseholdCreator',
     },

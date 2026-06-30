@@ -162,20 +162,33 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
       const householdId = id();
       const membershipId = id();
       const now = Date.now();
+      // Create the home + your owner membership FIRST and let it commit. The
+      // chore-seed perms check "is this person a member of the household", which
+      // can't resolve while the household, membership and chores are all born in
+      // a single transaction — the membership isn't visible yet. Two steps fixes
+      // it without loosening the rules.
       await db.transact([
         db.tx.households[householdId]
-          .update({ name: trimmed, createdAt: now })
+          .update({ name: trimmed, creatorId: userId, createdAt: now })
           .link({ creator: userId }),
         db.tx.memberships[membershipId]
-          .update({ role: 'owner', status: 'active', displayName: userName, joinedAt: now })
+          .update({
+            role: 'owner',
+            status: 'active',
+            userId,
+            displayName: userName,
+            joinedAt: now,
+          })
           .link({ household: householdId, user: userId }),
-        // Seed the starter chores quietly (no diary spam).
-        ...STARTER_CHORES.map((name, idx) =>
+      ]);
+      // Now that the membership exists, seed the starter chores quietly.
+      await db.transact(
+        STARTER_CHORES.map((name, idx) =>
           db.tx.chores[id()]
             .update({ name, createdAt: now + idx, updatedAt: now + idx })
             .link({ household: householdId, turn: userId }),
         ),
-      ]);
+      );
       await logActivity({
         householdId,
         actorId: userId,
@@ -232,7 +245,13 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
     try {
       await db.transact(
         db.tx.memberships[membershipId]
-          .update({ role: 'member', status: 'active', displayName: userName, joinedAt: Date.now() })
+          .update({
+            role: 'member',
+            status: 'active',
+            userId,
+            displayName: userName,
+            joinedAt: Date.now(),
+          })
           .link({ household: trimmed, user: userId }),
       );
       const { data } = await db.queryOnce({
