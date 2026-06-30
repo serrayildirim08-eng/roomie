@@ -136,17 +136,23 @@ kullanılıyor, beta kapısında rotasyon.
 
 ---
 
-## Faz 6 — 👀 Göz (OCR) — en zor, en sihirli
+## Faz 6 — 🛒 Grocery Scan (barkod) — revize 30 Haz
 
-**Amaç:** AH/Jumbo fişi → kalemler Kitchen'a, toplam Money'ye.
+**Amaç:** Alışveriş oturumu — ürünleri barkodla okut → Kitchen, toplamı yaz →
+Money. (OCR-fiş yönü v1.1'e ertelendi.) Tam PRD: [`GROCERY_SCAN_PRD.md`](GROCERY_SCAN_PRD.md).
+**Kararlar (Serra, 30 Haz):** dump KALIR, grocery'ye AYRI buton · barkod →
+Open Food Facts (ücretsiz global DB) · fiyat elle/Money toplamı · SKT yok
+(kategori tahmini yeter) · tam fiş-OCR + tarih-OCR → v1.1.
 
-- ⬜ **Foto çek/seç → Gemini Flash'a yolla**
-- ⬜ **Fiş parse** — kalemler + toplam çıkıyor
-- ⬜ **Onay/düzelt ekranı** — Test: yanlış okunan kalemi elle düzeltebiliyorsun
-- ⬜ **Onayla → 2 odaya yaz** — Test: gerçek bir AH fişi baştan sona: foto → onay → Kitchen + Money doğru
-- ⬜ **Maliyet kapısı** — fiş başına + aylık tavan
+- ⬜ **"Alışveriş başlat" butonu** (Pantry'de)
+- ⬜ **Barkod tarama** → Open Food Facts → isim+kategori → listeye
+- ⬜ **Bulunamadı fallback** — "adını yaz", oturum durmaz
+- ⬜ **Toplam €__ + ödeyen/bölüşen** (Money çipleri)
+- ⬜ **Bitir → 2 odaya yaz** — kalemler Kitchen'a, toplam Money'ye, günlüğe
+- ⬜ **`pantryItems.barcode` şema alanı** (opsiyonel, tekrar tanıma)
+- ⚠️ Barkod native modül → muhtemelen **dev build** gerekir (Expo Go değil)
 
-**Faz 6 BİTTİ =** hepsi ✅ + 3 gerçek (buruşuk dahil) fiş doğru işlendi.
+**Faz 6 BİTTİ =** 3 başarı kriteri (PRD) ✅ + gerçek bir alışveriş baştan sona.
 
 ---
 

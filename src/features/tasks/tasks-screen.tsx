@@ -13,10 +13,9 @@
 // removable like any other). Whoever ADDS a chore takes its first turn.
 
 import { id } from '@instantdb/react-native';
-import { useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,6 +23,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -46,6 +48,54 @@ import { CHORE_LIBRARY } from './starter';
 function emailName(email?: string): string | undefined {
   const local = email?.split('@')[0]?.replace(/\+.*$/, '');
   return local || undefined;
+}
+
+// A row whose secondary actions (Pass / Remove) stay hidden until you swipe
+// left — keeps the resting row to one clear action (Done).
+function SwipeRow({
+  children,
+  onPass,
+  onRemove,
+}: {
+  children: ReactNode;
+  onPass?: () => void;
+  onRemove: () => void;
+}) {
+  const ref = useRef<SwipeableMethods>(null);
+  return (
+    <ReanimatedSwipeable
+      ref={ref}
+      friction={2}
+      rightThreshold={36}
+      overshootRight={false}
+      renderRightActions={() => (
+        <View style={styles.actions}>
+          {onPass ? (
+            <Pressable
+              style={[styles.action, styles.actPass]}
+              onPress={() => {
+                ref.current?.close();
+                onPass();
+              }}
+            >
+              <Text style={styles.actPassLabel}>Pass</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            style={[styles.action, styles.actRemove]}
+            onPress={() => {
+              ref.current?.close();
+              onRemove();
+            }}
+          >
+            <Text style={styles.actRemoveLabel}>Remove</Text>
+          </Pressable>
+        </View>
+      )}
+    >
+      {children}
+    </ReanimatedSwipeable>
+  );
 }
 
 export function TasksScreen({ userId }: { userId: string }) {
@@ -180,17 +230,10 @@ export function TasksScreen({ userId }: { userId: string }) {
     await db.transact(db.tx.personalTasks[taskId].update({ status: 'done' }));
   };
 
-  const onMineDelete = (taskId: string, title: string) => {
-    Alert.alert('Remove this task?', `"${title}" will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          void db.transact(db.tx.personalTasks[taskId].delete());
-        },
-      },
-    ]);
+  // Swipe → Remove is already a two-step, deliberate gesture, so it deletes
+  // directly (no extra confirm dialog).
+  const onMineDelete = (taskId: string) => {
+    void db.transact(db.tx.personalTasks[taskId].delete());
   };
 
   const advance = async (
@@ -218,25 +261,16 @@ export function TasksScreen({ userId }: { userId: string }) {
   };
 
   const onDeleteChore = (choreId: string, choreName: string) => {
-    Alert.alert('Remove this chore?', `"${choreName}" and its history will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            await db.transact(db.tx.chores[choreId].delete());
-            await logActivity({
-              householdId: household.id,
-              actorId: userId,
-              actorName: myName,
-              type: 'chore_removed',
-              metadata: { chore: choreName },
-            });
-          })();
-        },
-      },
-    ]);
+    void (async () => {
+      await db.transact(db.tx.chores[choreId].delete());
+      await logActivity({
+        householdId: household.id,
+        actorId: userId,
+        actorName: myName,
+        type: 'chore_removed',
+        metadata: { chore: choreName },
+      });
+    })();
   };
 
   const renderChore = (chore: (typeof chores)[number]) => {
@@ -245,56 +279,49 @@ export function TasksScreen({ userId }: { userId: string }) {
     const open = openChoreId === chore.id;
     const events = chore.events ?? [];
     return (
-      <View key={chore.id} style={styles.choreCard}>
-        <Pressable style={styles.choreRow} onPress={() => setOpenChoreId(open ? null : chore.id)}>
-          <Text style={styles.choreName}>{chore.name}</Text>
-          <View style={[styles.turnPill, mine && styles.turnPillMine]}>
-            <Text style={[styles.turnPillLabel, mine && styles.turnPillLabelMine]}>
-              {mine ? 'Your turn' : (nameById[holderId ?? ''] ?? 'someone')}
-            </Text>
-          </View>
-          {mine ? (
+      <SwipeRow
+        key={chore.id}
+        onPass={mine ? () => advance(chore.id, chore.name, holderId, 'pass') : undefined}
+        onRemove={() => onDeleteChore(chore.id, chore.name)}
+      >
+        <View style={styles.choreCard}>
+          <Pressable style={styles.choreRow} onPress={() => setOpenChoreId(open ? null : chore.id)}>
+            <View style={[styles.turnBar, mine ? styles.turnBarMine : styles.turnBarOther]} />
+            <View style={styles.choreNameWrap}>
+              <Text style={styles.choreName}>{chore.name}</Text>
+              {!mine ? (
+                <Text style={styles.choreSub}>
+                  {nameById[holderId ?? ''] ?? 'someone'}’s turn
+                </Text>
+              ) : null}
+            </View>
             <Pressable
-              style={styles.pass}
-              onPress={() => advance(chore.id, chore.name, holderId, 'pass')}
+              style={styles.done}
+              onPress={() => advance(chore.id, chore.name, holderId, 'done')}
             >
-              <Text style={styles.passLabel}>Pass</Text>
+              <Text style={styles.doneLabel}>Done ✓</Text>
             </Pressable>
-          ) : null}
-          <Pressable
-            style={styles.done}
-            onPress={() => advance(chore.id, chore.name, holderId, 'done')}
-          >
-            <Text style={styles.doneLabel}>Done ✓</Text>
           </Pressable>
-          <Pressable
-            style={styles.delete}
-            onPress={() => onDeleteChore(chore.id, chore.name)}
-            hitSlop={8}
-            accessibilityLabel={`Remove ${chore.name}`}
-          >
-            <Text style={styles.deleteLabel}>✕</Text>
-          </Pressable>
-        </Pressable>
 
-        {open ? (
-          <View style={styles.history}>
-            {events.length === 0 ? (
-              <Text style={styles.historyEmpty}>No history yet.</Text>
-            ) : (
-              events.map((ev) => (
-                <View key={ev.id} style={styles.historyRow}>
-                  <Text style={styles.historyText}>
-                    {ev.by?.id === userId ? 'You' : (nameById[ev.by?.id ?? ''] ?? 'Someone')}{' '}
-                    {ev.type === 'done' ? 'did it' : 'passed'}
-                  </Text>
-                  <Text style={styles.historyTime}>{timeAgo(Number(ev.at))}</Text>
-                </View>
-              ))
-            )}
-          </View>
-        ) : null}
-      </View>
+          {open ? (
+            <View style={styles.history}>
+              {events.length === 0 ? (
+                <Text style={styles.historyEmpty}>No history yet.</Text>
+              ) : (
+                events.map((ev) => (
+                  <View key={ev.id} style={styles.historyRow}>
+                    <Text style={styles.historyText}>
+                      {ev.by?.id === userId ? 'You' : (nameById[ev.by?.id ?? ''] ?? 'Someone')}{' '}
+                      {ev.type === 'done' ? 'did it' : 'passed'}
+                    </Text>
+                    <Text style={styles.historyTime}>{timeAgo(Number(ev.at))}</Text>
+                  </View>
+                ))
+              )}
+            </View>
+          ) : null}
+        </View>
+      </SwipeRow>
     );
   };
 
@@ -313,20 +340,17 @@ export function TasksScreen({ userId }: { userId: string }) {
             <SectionHead title="Mine" />
             {myChores.map(renderChore)}
             {myTasks.map((t) => (
-              <View key={t.id} style={styles.mineRow}>
-                <Text style={styles.mineTitle}>{t.title}</Text>
-                <Pressable style={styles.done} onPress={() => onMineDone(t.id)}>
-                  <Text style={styles.doneLabel}>Done ✓</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.delete}
-                  onPress={() => onMineDelete(t.id, t.title)}
-                  hitSlop={8}
-                  accessibilityLabel={`Remove ${t.title}`}
-                >
-                  <Text style={styles.deleteLabel}>✕</Text>
-                </Pressable>
-              </View>
+              <SwipeRow key={t.id} onRemove={() => onMineDelete(t.id)}>
+                <View style={[styles.choreCard, styles.mineCard]}>
+                  <View style={styles.choreRow}>
+                    <View style={[styles.turnBar, styles.turnBarMine]} />
+                    <Text style={[styles.choreName, styles.choreNameWrap]}>{t.title}</Text>
+                    <Pressable style={styles.done} onPress={() => onMineDone(t.id)}>
+                      <Text style={styles.doneLabel}>Done ✓</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </SwipeRow>
             ))}
             {myTasks.length === 0 && myChores.length === 0 ? (
               <Text style={styles.muted}>Nothing on your plate. 🤍</Text>
@@ -449,37 +473,32 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
   },
-  choreRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
-  choreName: { flex: 1, fontSize: 15.5, fontFamily: RoomieFonts.display, color: Roomie.ink },
-  turnPill: {
-    borderRadius: 999,
-    paddingVertical: 5,
-    paddingHorizontal: 11,
-    backgroundColor: Roomie.input,
-    borderWidth: 1,
-    borderColor: Roomie.hairline,
-  },
-  turnPillMine: { backgroundColor: Roomie.accent, borderColor: Roomie.accent },
-  turnPillLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
-  turnPillLabelMine: { color: Roomie.onAccent, fontFamily: RoomieFonts.bodyBold },
-  pass: {
-    borderWidth: 1,
-    borderColor: Roomie.hairline,
-    backgroundColor: Roomie.input,
-    borderRadius: 12,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-  },
-  passLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  choreRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
+  turnBar: { width: 4, alignSelf: 'stretch', borderRadius: 9, minHeight: 22 },
+  turnBarMine: { backgroundColor: Roomie.coral },
+  turnBarOther: { backgroundColor: Roomie.hairline },
+  choreNameWrap: { flex: 1 },
+  choreName: { fontSize: 16, fontFamily: RoomieFonts.display, color: Roomie.ink },
+  choreSub: { fontSize: 11.5, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink3, marginTop: 1 },
   done: {
     backgroundColor: Roomie.sage,
-    borderRadius: 12,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    shadowColor: Roomie.dropGreen ?? Roomie.forestInk,
+    shadowOpacity: 0.18,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 3 },
   },
-  doneLabel: { color: Roomie.onAccent, fontSize: 13, fontFamily: RoomieFonts.bodyBold },
-  delete: { padding: 4 },
-  deleteLabel: { fontSize: 15, color: Roomie.danger },
+  doneLabel: { color: Roomie.onAccent, fontSize: 14, fontFamily: RoomieFonts.bodyBold },
+  mineCard: {},
+  // swipe-revealed actions
+  actions: { flexDirection: 'row', alignItems: 'stretch', marginLeft: 8 },
+  action: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 18, borderRadius: 18 },
+  actPass: { backgroundColor: Roomie.gold, marginRight: 8 },
+  actPassLabel: { fontFamily: RoomieFonts.bodyBold, fontSize: 14, color: Roomie.forestInk },
+  actRemove: { backgroundColor: Roomie.danger },
+  actRemoveLabel: { fontFamily: RoomieFonts.bodyBold, fontSize: 14, color: '#fff' },
   history: {
     borderTopWidth: 1,
     borderTopColor: Roomie.hairline,
@@ -490,18 +509,6 @@ const styles = StyleSheet.create({
   historyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
   historyText: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   historyTime: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.ink3 },
-  mineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Roomie.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#EFEBE1',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  mineTitle: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   seedLink: { paddingVertical: 8 },
   seedLinkLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.forest },
   libGroup: { gap: 2, marginBottom: 6 },

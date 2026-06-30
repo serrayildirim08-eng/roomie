@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontFamily: RoomieFonts.displayBold,
     fontSize: 32,
-    lineHeight: 35,
+    lineHeight: 42, // generous — Baloo's rounded glyphs clip at a tight line height
     color: '#fff',
     marginTop: 4,
   },

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roomie — Grocery Scan mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --canvas:#F4F1EA; --card:#FFFFFF; --ink:#16201B; --sub:#566159; --ink3:#8A958F;
+    --hair:#E8E3D9; --forest:#1A6B43; --forest2:#268A57; --forestInk:#0F3D27;
+    --dropGreen:#114E30; --coral:#FF6A3D; --pink:#FF4D8D; --gold:#FFCB2E; --sageSoft:#E6F4EC;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E2D6;font-family:'Nunito',sans-serif;color:var(--ink);
+    padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:6px}
+  h1{font-family:'Baloo 2';font-weight:800;color:var(--forestInk);font-size:26px}
+  .sub{color:var(--sub);font-size:14px;margin-bottom:26px}
+  .row{display:flex;gap:34px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .cap{font-family:'Baloo 2';font-weight:700;color:var(--forestInk);font-size:15px}
+  .capn{color:var(--ink3);font-size:12px;max-width:300px;text-align:center;line-height:1.45}
+  .phone{width:300px;height:644px;background:var(--canvas);border-radius:42px;
+    box-shadow:0 0 0 11px #1c1c1e,0 22px 50px rgba(0,0,0,.30);overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:118px;height:30px;background:#1c1c1e;border-radius:18px;z-index:9}
+
+  /* ---- signature forest hero (like Home) ---- */
+  .hero{background:linear-gradient(160deg,#21744A 0%,#185A39 60%,#114E30 100%);
+    border-radius:0 0 28px 28px;padding:42px 20px 20px;color:#fff;position:relative}
+  .gear{position:absolute;top:30px;right:18px;width:42px;height:42px;border-radius:50%;
+    background:#3C7DF0;border:3px solid #6FA0F5;display:grid;place-items:center;font-size:18px;box-shadow:0 5px 0 #2a59b0}
+  .hchip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:9px 12px;width:fit-content;margin-bottom:14px}
+  .hchip .he{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.16);display:grid;place-items:center;font-size:15px}
+  .hchip b{font-family:'Baloo 2';font-weight:700;font-size:14px}
+  .hchip span{display:block;font-size:11px;color:rgba(255,255,255,.7)}
+  .eyebrow{font-family:'Nunito';font-weight:800;font-size:11px;letter-spacing:1.6px;color:rgba(255,255,255,.65);text-transform:uppercase}
+  .htitle{font-family:'Baloo 2';font-weight:800;font-size:27px;line-height:1.1;margin-top:3px}
+  .herostat{display:flex;align-items:flex-end;justify-content:space-between;margin-top:14px}
+  .avatar{width:38px;height:38px;border-radius:50%;background:var(--coral);border:2px solid #fff3;
+    display:grid;place-items:center;color:#fff;font-family:'Baloo 2';font-weight:800;font-size:15px}
+  .hbig{font-family:'Baloo 2';font-weight:800;font-size:30px;line-height:1}
+  .hbig small{font-size:14px;opacity:.7;font-weight:700}
+
+  .body{flex:1;overflow:hidden;padding:14px 18px 0;display:flex;flex-direction:column;gap:12px}
+  .lede{color:var(--sub);font-size:13px;line-height:1.4}
+  .card{background:var(--card);border-radius:20px;padding:15px 16px;box-shadow:0 2px 0 var(--hair),0 8px 18px rgba(20,40,30,.05)}
+  .btnG{background:var(--forest);color:#fff;font-family:'Baloo 2';font-weight:700;font-size:17px;
+    text-align:center;padding:17px;border-radius:20px;box-shadow:0 5px 0 var(--dropGreen);}
+  .tabbar{position:absolute;bottom:14px;left:14px;right:14px;height:62px;background:#fff;border-radius:24px;
+    box-shadow:0 6px 18px rgba(20,40,30,.10);display:flex;align-items:center;justify-content:space-around;font-size:11px;color:var(--ink3);font-family:'Baloo 2';font-weight:700}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .tab.on{color:var(--forest)}
+  .tab .ic{font-size:19px}
+  .pill{display:inline-block;background:rgba(255,255,255,.15);color:#fff;font-family:'Baloo 2';font-weight:700;font-size:12px;padding:4px 11px;border-radius:999px}
+  .item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--hair)}
+  .item:last-child{border-bottom:none}
+  .emoji{width:38px;height:38px;border-radius:12px;background:var(--sageSoft);display:grid;place-items:center;font-size:19px;flex-shrink:0}
+  .iname{font-family:'Baloo 2';font-weight:700;font-size:15px}
+  .icat{color:var(--ink3);font-size:11px}
+  .check{margin-left:auto;color:var(--forest);font-weight:800;font-size:16px}
+  .agepill{margin-left:auto;background:#FFF0E6;color:var(--coral);font-family:'Baloo 2';font-weight:700;font-size:11px;padding:3px 10px;border-radius:999px}
+  .cam{height:158px;border-radius:20px;background:radial-gradient(120% 90% at 50% 0%,#2a2f2b 0%,#15201a 100%);position:relative;overflow:hidden;display:grid;place-items:center}
+  .frame{width:172px;height:92px;border-radius:14px;box-shadow:0 0 0 3px rgba(255,255,255,.9),0 0 0 2000px rgba(10,16,12,.45)}
+  .laser{position:absolute;top:50%;left:18%;right:18%;height:2px;background:var(--coral);box-shadow:0 0 10px 1px var(--coral)}
+  .camhint{position:absolute;bottom:11px;left:0;right:0;text-align:center;color:#fff;font-family:'Baloo 2';font-weight:700;font-size:12px;opacity:.92}
+  .blink{display:inline-block;width:2px;height:18px;background:#fff;vertical-align:-2px;animation:b 1s steps(1) infinite}
+  .blinkG{display:inline-block;width:2px;height:18px;background:var(--forest);vertical-align:-3px;animation:b 1s steps(1) infinite}
+  @keyframes b{50%{opacity:0}}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-family:'Baloo 2';font-weight:700;font-size:12px;padding:7px 12px;border-radius:999px;background:#fff;border:1.5px solid var(--hair);color:var(--sub)}
+  .chip.on{background:var(--forest);color:#fff;border-color:var(--forest)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:26px 26px 0 0;padding:20px 18px 24px;box-shadow:0 -10px 30px rgba(0,0,0,.12)}
+  .grab{width:40px;height:4px;background:var(--hair);border-radius:9px;margin:0 auto 14px}
+  .field{border:1.5px solid var(--hair);border-radius:14px;padding:13px 14px;color:var(--ink3);font-family:'Baloo 2';font-weight:700;font-size:15px}
+  .scrim{position:absolute;inset:0;background:rgba(15,30,22,.35)}
+  .sum{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--hair)}
+  .sumic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:20px}
+  .big{font-family:'Baloo 2';font-weight:800;font-size:17px}
+  .muted{color:var(--sub);font-size:12px}
+  .tlabel{color:var(--sub);font-size:13px;font-weight:700}
+</style>
+</head>
+<body>
+  <h1>Roomie · Grocery Scan</h1>
+  <div class="sub">30 Haz 2026 — mock v2 (yeşil hero, app diliyle). Dump kalır, grocery'ye ayrı buton.</div>
+
+  <div class="row">
+
+    <!-- 1. ENTRY -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="hero" style="padding-top:46px">
+          <div class="gear">⚙️</div>
+          <div class="hchip"><div class="he">🏡</div><div><b>Testflat</b><span>just you so far</span></div></div>
+          <div class="eyebrow">Kitchen</div>
+          <div class="htitle">Kiler</div>
+          <div class="herostat"><div style="font-size:13px;color:rgba(255,255,255,.8)">8 şey · 2 azalıyor</div></div>
+        </div>
+        <div class="body">
+          <div class="card" style="padding:6px 16px">
+            <div class="item"><div class="emoji">🥛</div><div><div class="iname">Süt</div><div class="icat">~2 gün kaldı</div></div><span class="agepill">azalıyor</span></div>
+            <div class="item"><div class="emoji">🥚</div><div><div class="iname">Yumurta</div><div class="icat">var</div></div></div>
+            <div class="item"><div class="emoji">🍞</div><div><div class="iname">Ekmek</div><div class="icat">listede</div></div></div>
+          </div>
+          <div style="flex:1"></div>
+          <div class="btnG" style="margin-bottom:14px">🛒  Alışveriş başlat</div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><span class="ic">🏠</span>Home</div>
+          <div class="tab on"><span class="ic">🧺</span>Kitchen</div>
+          <div class="tab"><span class="ic">✓</span>Tasks</div>
+          <div class="tab"><span class="ic">💶</span>Money</div>
+        </div>
+      </div>
+      <div class="cap">1 · Giriş</div>
+      <div class="capn">Kitchen'ın yeşil hero'su, altında tek tuş. Dump'a dokunmuyoruz — bu ayrı kapı.</div>
+    </div>
+
+    <!-- 2. SCANNING -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="hero">
+          <div class="eyebrow">Alışveriş</div>
+          <div class="herostat">
+            <div class="htitle">Tarama <span class="pill" style="vertical-align:5px">3 ürün</span></div>
+            <div style="text-align:right"><div style="font-size:11px;color:rgba(255,255,255,.65)">TOPLAM</div><div class="hbig">€14,30<span class="blink"></span></div></div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="cam">
+            <div class="frame"></div><div class="laser"></div>
+            <div class="camhint">barkodu çerçeveye tut</div>
+          </div>
+          <div class="card" style="padding:4px 16px;flex:1;overflow:hidden">
+            <div class="item"><div class="emoji">🥛</div><div><div class="iname">AH Halfvolle Melk</div><div class="icat">Süt ürünleri</div></div><span class="check">✓</span></div>
+            <div class="item"><div class="emoji">🧀</div><div><div class="iname">Goudse Kaas 48+</div><div class="icat">Peynir</div></div><span class="check">✓</span></div>
+            <div class="item"><div class="emoji">🍝</div><div><div class="iname">Penne Rigate 500g</div><div class="icat">Makarna</div></div><span class="check">✓</span></div>
+          </div>
+          <div class="btnG" style="margin-bottom:12px">Bitir →</div>
+        </div>
+      </div>
+      <div class="cap">2 · Tarama</div>
+      <div class="capn">Hero'da büyük toplam (app'in hero-sayı dili). Okut → anında listeye. Tek odak.</div>
+    </div>
+
+    <!-- 3. NOT FOUND -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="hero">
+          <div class="eyebrow">Alışveriş</div>
+          <div class="herostat">
+            <div class="htitle">Tarama <span class="pill" style="vertical-align:5px">3 ürün</span></div>
+            <div style="text-align:right"><div style="font-size:11px;color:rgba(255,255,255,.65)">TOPLAM</div><div class="hbig">€14,30</div></div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="cam" style="height:150px"><div class="frame"></div><div class="laser"></div></div>
+          <div class="card" style="padding:4px 16px;opacity:.45">
+            <div class="item"><div class="emoji">🥛</div><div><div class="iname">AH Halfvolle Melk</div><div class="icat">Süt ürünleri</div></div><span class="check">✓</span></div>
+          </div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div style="font-family:'Baloo 2';font-weight:800;font-size:18px">Bunu bulamadım 🤔</div>
+          <div class="lede" style="margin:6px 0 14px">Barkod tanınmadı — adını yaz, listeye eklenir. Akış durmaz.</div>
+          <div class="field" style="margin-bottom:8px">Domates &nbsp;<span class="blinkG"></span></div>
+          <div class="chips" style="margin-bottom:16px">
+            <span class="chip on">Sebze</span><span class="chip">Meyve</span><span class="chip">Atıştırma</span><span class="chip">Diğer</span>
+          </div>
+          <div class="btnG">Ekle</div>
+        </div>
+      </div>
+      <div class="cap">3 · Bulunamadı</div>
+      <div class="capn">Manav/fırın ürünü barkodsuz olur. Küçük sheet, adını yaz → devam. Hiç bloklamaz.</div>
+    </div>
+
+    <!-- 4. FINISH -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="hero">
+          <div class="eyebrow">Son adım</div>
+          <div class="htitle">Bitirelim mi?</div>
+          <div class="herostat"><div style="font-size:13px;color:rgba(255,255,255,.8)">onayla → iki telefonda da görünür</div></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="sum"><div class="sumic" style="background:var(--sageSoft)">🧺</div><div><div class="big">4 ürün → Kitchen</div><div class="muted">Süt · Kaşar · Makarna · Domates</div></div></div>
+            <div class="sum" style="border:none"><div class="sumic" style="background:#FFF0E6">💶</div><div><div class="big">€14,30 → Money</div><div class="muted">eşit bölüşüm · €7,15 sana · €7,15 Kel</div></div></div>
+          </div>
+          <div class="card" style="padding:13px 16px">
+            <div class="tlabel" style="margin-bottom:9px">Kim ödedi?</div>
+            <div class="chips"><span class="chip on">Sen</span><span class="chip">Kel</span></div>
+            <div class="tlabel" style="margin:13px 0 9px">Kimler bölüşüyor?</div>
+            <div class="chips"><span class="chip on">Sen</span><span class="chip on">Kel</span></div>
+          </div>
+          <div style="flex:1"></div>
+          <div class="btnG" style="margin-bottom:14px">Onayla ve bitir ✓</div>
+        </div>
+      </div>
+      <div class="cap">4 · Bitir</div>
+      <div class="capn">Yeşil hero + tek özet: ne nereye + ödeyen/bölüşen. Onaysız hiçbir şey yazılmaz.</div>
+    </div>
+
+  </div>
+</body>
+</html>

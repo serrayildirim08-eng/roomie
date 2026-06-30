@@ -352,7 +352,12 @@ export function MoneyScreen({ userId }: { userId: string }) {
                   return (
                     <View key={idx} style={[styles.debtRow, idx > 0 && styles.rowDivided]}>
                       <Text style={styles.debtText}>{label}</Text>
-                      <Text style={[styles.debtAmount, !youPay && styles.amountPositive]}>
+                      <Text
+                        style={[
+                          styles.debtAmount,
+                          youPay ? styles.amountOwe : styles.amountPositive,
+                        ]}
+                      >
                         {formatEur(d.amountCents)}
                       </Text>
                       {youPay ? (
@@ -427,7 +432,7 @@ const styles = StyleSheet.create({
   heroBalance: {
     fontFamily: RoomieFonts.displayBold,
     fontSize: 54,
-    lineHeight: 56,
+    lineHeight: 68, // Baloo's rounded glyphs clip at a tight line height
     color: '#fff',
     marginTop: 12,
   },
@@ -483,7 +488,8 @@ const styles = StyleSheet.create({
   },
   debtText: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   debtAmount: { fontSize: 17, fontFamily: RoomieFonts.displayBold, color: Roomie.ink },
-  amountPositive: { color: Roomie.forest },
+  amountPositive: { color: Roomie.forest }, // owed to you → calm green
+  amountOwe: { color: Roomie.coral }, // you owe → coral: "this is on you"
   settlePink: {
     backgroundColor: Roomie.pink,
     borderRadius: 12,

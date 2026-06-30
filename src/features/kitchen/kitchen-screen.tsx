@@ -24,6 +24,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import {
   Card,
+  ChunkyButton,
   Hero,
   HeroBar,
   HeroEyebrow,
@@ -38,6 +39,7 @@ import { db } from '@/lib/db';
 
 import { ageOf } from './aging';
 import { itemEmoji } from './alias-data';
+import { GroceryScan } from './grocery-scan';
 import { resolveItem } from './normalize';
 
 // "vfya+clerk_test@example.com" → "vfya"
@@ -59,6 +61,7 @@ export function KitchenScreen({ userId }: { userId: string }) {
   });
 
   const [draft, setDraft] = useState('');
+  const [scanning, setScanning] = useState(false);
   // Money bridge: when set, we just restocked this item and offer "Add to Money?"
   const [bridge, setBridge] = useState<{ itemName: string } | null>(null);
   const [bridgeAmount, setBridgeAmount] = useState('');
@@ -94,6 +97,9 @@ export function KitchenScreen({ userId }: { userId: string }) {
     ]),
   );
   const myName = nameById[userId] ?? 'You';
+  const members = household.memberships
+    .map((m) => ({ id: m.user?.id ?? '', name: nameById[m.user?.id ?? ''] ?? 'Someone' }))
+    .filter((m) => m.id);
 
   const items = [...household.pantryItems].sort((a, b) => a.name.localeCompare(b.name));
   const inPantry = items.filter((it) => it.status === 'in');
@@ -279,6 +285,8 @@ export function KitchenScreen({ userId }: { userId: string }) {
             </Pressable>
           </View>
 
+          <ChunkyButton label="🛒  Start shopping" onPress={() => setScanning(true)} />
+
           {bridge ? (
             <Card pad style={styles.bridgeCard}>
               <Text style={styles.bridgeTitle}>Add {bridge.itemName} to Money?</Text>
@@ -383,6 +391,17 @@ export function KitchenScreen({ userId }: { userId: string }) {
           </View>
         </View>
       </ScrollView>
+
+      <GroceryScan
+        visible={scanning}
+        onClose={() => setScanning(false)}
+        householdId={household.id}
+        userId={userId}
+        myName={myName}
+        members={members}
+        existingItems={items}
+        nameById={nameById}
+      />
     </View>
   );
 }

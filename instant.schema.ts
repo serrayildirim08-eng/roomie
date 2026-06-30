@@ -77,6 +77,7 @@ const _schema = i.schema({
       category: i.string(), // GroceryCategory
       status: i.string(), // 'in' | 'out'
       shelfLifeDays: i.number().optional(), // null = unknown → never ages
+      barcode: i.string().optional().indexed(), // set when added via Grocery Scan
       addedAt: i.date().indexed(), // reset on every restock; drives aging
       createdAt: i.date().indexed(),
       updatedAt: i.date().indexed(),

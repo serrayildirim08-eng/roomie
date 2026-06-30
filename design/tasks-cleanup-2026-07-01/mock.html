@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roomie — Tasks cleanup</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--canvas:#F4F1EA;--card:#FFFFFF;--ink:#16201B;--sub:#566159;--ink3:#8A958F;
+    --hair:#E8E3D9;--forest:#1A6B43;--forestInk:#0F3D27;--dropGreen:#114E30;--coral:#FF6A3D;--gold:#FFCB2E;--sageSoft:#E6F4EC;--danger:#E0452B;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E2D6;font-family:'Nunito',sans-serif;color:var(--ink);padding:40px 24px;display:flex;flex-direction:column;align-items:center}
+  h1{font-family:'Baloo 2';font-weight:800;color:var(--forestInk);font-size:26px}
+  .sub{color:var(--sub);font-size:14px;margin-bottom:26px}
+  .row2{display:flex;gap:40px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .cap{font-family:'Baloo 2';font-weight:700;color:var(--forestInk);font-size:15px}
+  .capn{color:var(--ink3);font-size:12px;max-width:330px;text-align:center;line-height:1.45}
+  .phone{width:330px;background:var(--canvas);border-radius:42px;box-shadow:0 0 0 11px #1c1c1e,0 22px 50px rgba(0,0,0,.3);overflow:hidden;padding-bottom:24px}
+  .hero{background:linear-gradient(160deg,#21744A,#185A39 60%,#114E30);border-radius:0 0 28px 28px;padding:44px 22px 22px;color:#fff}
+  .eyebrow{font-weight:800;font-size:11px;letter-spacing:1.6px;color:rgba(255,255,255,.65);text-transform:uppercase}
+  .htitle{font-family:'Baloo 2';font-weight:800;font-size:28px;margin-top:3px}
+  .hsub{font-size:13px;color:rgba(255,255,255,.8);margin-top:8px}
+  .body{padding:18px}
+  .sect{font-family:'Baloo 2';font-weight:800;font-size:18px;margin:4px 0 12px}
+
+  /* OLD busy row */
+  .oldcard{background:#fff;border-radius:20px;padding:14px 16px;box-shadow:0 2px 0 var(--hair);display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .oldname{font-family:'Baloo 2';font-weight:700;font-size:16px;flex:1}
+  .b{font-family:'Baloo 2';font-weight:700;font-size:13px;padding:9px 12px;border-radius:999px;white-space:nowrap}
+  .bturn{background:var(--forest);color:#fff}
+  .bpass{background:#fff;border:1.5px solid var(--hair);color:var(--sub)}
+  .bdone{background:var(--forest);color:#fff}
+  .bx{color:var(--danger);font-size:16px;padding:0 4px}
+
+  /* NEW clean row */
+  .newcard{background:#fff;border-radius:20px;padding:18px 18px;box-shadow:0 2px 0 var(--hair),0 8px 18px rgba(20,40,30,.05);display:flex;align-items:center;gap:12px;margin-bottom:12px;position:relative;overflow:hidden}
+  .turnbar{width:4px;align-self:stretch;border-radius:9px;background:var(--coral)}
+  .newname{font-family:'Baloo 2';font-weight:700;font-size:17px;flex:1}
+  .newsub{font-size:11px;color:var(--ink3);font-weight:700}
+  .done{background:var(--forest);color:#fff;font-family:'Baloo 2';font-weight:700;font-size:15px;padding:11px 20px;border-radius:14px;box-shadow:0 4px 0 var(--dropGreen)}
+  /* swiped state */
+  .swwrap{position:relative;margin-bottom:12px;border-radius:20px;overflow:hidden}
+  .swback{position:absolute;inset:0;display:flex;justify-content:flex-end;align-items:stretch}
+  .swpass{background:var(--gold);color:#5a4a00;display:flex;align-items:center;padding:0 20px;font-family:'Baloo 2';font-weight:700;font-size:14px}
+  .swdel{background:var(--danger);color:#fff;display:flex;align-items:center;padding:0 20px;font-family:'Baloo 2';font-weight:700;font-size:14px}
+  .swfront{position:relative;transform:translateX(-150px);background:#fff;border-radius:20px;padding:18px;box-shadow:0 2px 0 var(--hair);display:flex;align-items:center;gap:12px}
+</style>
+</head>
+<body>
+  <h1>Tasks — sadeleştirme</h1>
+  <div class="sub">1 Tem 2026 — mock. Satırda tek aksiyon; Pass/sil kaydırmada.</div>
+
+  <div class="row2">
+
+    <!-- BEFORE -->
+    <div class="col">
+      <div class="phone">
+        <div class="hero"><div class="eyebrow">Tasks</div><div class="htitle">Mine</div><div class="hsub">sıran gelen işler</div></div>
+        <div class="body">
+          <div class="oldcard"><span class="oldname">Dishes</span><span class="b bturn">Your turn</span><span class="b bpass">Pass</span><span class="b bdone">Done ✓</span><span class="bx">✕</span></div>
+          <div class="oldcard"><span class="oldname">Trash</span><span class="b bturn">Your turn</span><span class="b bpass">Pass</span><span class="b bdone">Done ✓</span><span class="bx">✕</span></div>
+          <div class="oldcard"><span class="oldname">Bathroom</span><span class="b bturn">Your turn</span><span class="b bpass">Pass</span><span class="b bdone">Done ✓</span><span class="bx">✕</span></div>
+        </div>
+      </div>
+      <div class="cap">ŞİMDİ</div>
+      <div class="capn">Satır başına 4 kontrol, iki yeşil yarışıyor, "Your turn" her satırda tekrar. 6 satır = 24 buton.</div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="col">
+      <div class="phone">
+        <div class="hero"><div class="eyebrow">Tasks</div><div class="htitle">Mine</div><div class="hsub">3 iş senin sıranda</div></div>
+        <div class="body">
+          <div class="newcard"><div class="turnbar"></div><span class="newname">Dishes</span><span class="done">Done ✓</span></div>
+          <div class="newcard"><div class="turnbar"></div><span class="newname">Trash</span><span class="done">Done ✓</span></div>
+          <div class="newcard"><div class="turnbar"></div><span class="newname">Bathroom</span><span class="done">Done ✓</span></div>
+          <!-- swiped row -->
+          <div class="swwrap">
+            <div class="swback"><div class="swpass">Pass</div><div class="swdel">Remove</div></div>
+            <div class="swfront"><div class="turnbar"></div><span class="newname">Vacuum</span><span class="done">Done ✓</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">ÖNERİ</div>
+      <div class="capn">Satır = iş adı + tek Done. Soldaki ince çubuk "senin sıran"ı sessizce gösterir (pill yok). Pass + Remove sola kaydırınca çıkar (en alttaki satır kaydırılmış halde).</div>
+    </div>
+
+  </div>
+</body>
+</html>
