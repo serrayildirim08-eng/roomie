@@ -75,11 +75,21 @@ export function BrainInput({
     setAck([]);
     try {
       const token = await getToken();
-      const res = await fetch(`${BRAIN_URL}/draft`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ text: note }),
-      });
+      // Guard against a hung request: abort after 15s so the spinner can never
+      // freeze forever — the catch below flips to the error state.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      let res: Response;
+      try {
+        res = await fetch(`${BRAIN_URL}/draft`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ text: note }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
       const body = (await res.json()) as DraftResponse;
       if (!res.ok) throw new Error(body.error ?? `http ${res.status}`);
       setFragments(body.fragments);
