@@ -36,6 +36,7 @@ import { BrainInput } from '@/features/brain/brain-input';
 import { HomePulse } from '@/features/home/home-pulse';
 import { TinyWins } from '@/features/home/tiny-wins';
 import { WeeklyRecap } from '@/features/home/weekly-recap';
+import { AccountActions } from '@/features/account/account';
 
 import { STARTER_PACKS, type HomeType } from '@/features/tasks/starter';
 
@@ -445,6 +446,8 @@ function HouseholdHome({
               <Text style={styles.signoutLabel}>Sign out</Text>
             </Pressable>
           </View>
+
+          <AccountActions userId={userId} userName={userName} />
         </View>
       </ScrollView>
     </View>
