@@ -69,6 +69,14 @@ export function KitchenScreen({ userId }: { userId: string }) {
   // A quiet, transient "you got it" whisper — never a tally, just a soft ack.
   const [whisper, setWhisper] = useState<string | null>(null);
   const whisperTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // In-flight guard so a fast double-tap can't write the same item twice.
+  const savingRef = useRef(false);
+
+  const flashWhisper = (msg: string) => {
+    if (whisperTimer.current) clearTimeout(whisperTimer.current);
+    setWhisper(msg);
+    whisperTimer.current = setTimeout(() => setWhisper(null), 1600);
+  };
 
   useEffect(() => {
     return () => {
@@ -127,42 +135,52 @@ export function KitchenScreen({ userId }: { userId: string }) {
   const onAdd = async () => {
     const typed = draft.trim();
     if (!typed) return;
+    if (savingRef.current) return; // already writing — ignore the double-tap
+    savingRef.current = true;
     const resolved = resolveItem(typed);
     setDraft('');
 
-    // Same item already known? Revive it instead of duplicating.
-    const existing = items.find((it) => it.normalizedName === resolved.normalizedName);
-    if (existing) {
-      if (existing.status === 'in') return; // already in the pantry — nothing to do
-      await db.transact(
-        db.tx.pantryItems[existing.id]
-          .update({ status: 'in', addedAt: now, updatedAt: now })
-          .unlink({ claimedBy: existing.claimedBy?.id ?? '' }),
-      );
-    } else {
-      const itemId = id();
-      await db.transact(
-        db.tx.pantryItems[itemId]
-          .update({
-            name: resolved.name,
-            normalizedName: resolved.normalizedName,
-            category: resolved.category,
-            status: 'in',
-            shelfLifeDays: resolved.shelfLifeDays ?? undefined,
-            addedAt: now,
-            createdAt: now,
-            updatedAt: now,
-          })
-          .link({ household: household.id }),
-      );
+    try {
+      // Same item already known? Revive it instead of duplicating.
+      const existing = items.find((it) => it.normalizedName === resolved.normalizedName);
+      if (existing) {
+        if (existing.status === 'in') return; // already in the pantry — nothing to do
+        await db.transact(
+          db.tx.pantryItems[existing.id]
+            .update({ status: 'in', addedAt: now, updatedAt: now })
+            .unlink({ claimedBy: existing.claimedBy?.id ?? '' }),
+        );
+      } else {
+        const itemId = id();
+        await db.transact(
+          db.tx.pantryItems[itemId]
+            .update({
+              name: resolved.name,
+              normalizedName: resolved.normalizedName,
+              category: resolved.category,
+              status: 'in',
+              shelfLifeDays: resolved.shelfLifeDays ?? undefined,
+              addedAt: now,
+              createdAt: now,
+              updatedAt: now,
+            })
+            .link({ household: household.id }),
+        );
+      }
+      await logActivity({
+        householdId: household.id,
+        actorId: userId,
+        actorName: myName,
+        type: 'pantry_added',
+        metadata: { item: resolved.name },
+      });
+    } catch {
+      // Write failed — tell the user softly and give their text back.
+      setDraft(typed);
+      flashWhisper('Could not save — try again.');
+    } finally {
+      savingRef.current = false;
     }
-    await logActivity({
-      householdId: household.id,
-      actorId: userId,
-      actorName: myName,
-      type: 'pantry_added',
-      metadata: { item: resolved.name },
-    });
   };
 
   const onOut = async (itemId: string, itemName: string) => {
