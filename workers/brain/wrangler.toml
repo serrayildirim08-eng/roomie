@@ -17,3 +17,13 @@ binding = "AI"
 
 [observability]
 enabled = true
+
+# Per-user daily call cap (rate-limit.ts). Until this KV namespace is bound the
+# worker falls back to a crude in-memory global guard — fine for one-flat
+# dogfood, but bind this BEFORE letting strangers/other households in.
+# Provision + wire up:
+#   npx wrangler kv namespace create RATE_LIMIT
+# then paste the printed id below and uncomment:
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id = "<paste-id-here>"
