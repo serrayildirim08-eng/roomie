@@ -17,17 +17,52 @@ export function AccountActions({ userId, userName }: { userId: string; userName:
 
   const onExport = async () => {
     try {
-      const { data } = await db.queryOnce({
-        memberships: {
-          $: { where: { 'user.id': userId } },
-          household: {},
-        },
-        personalTasks: { $: { where: { 'owner.id': userId } } },
-      });
+      // Money rows that mention YOU — fronted, split into, paid or received.
+      // They stay on each household ledger after deletion; the export is how
+      // you take a copy with you. Two queries per entity because the typed
+      // where-clause can't express `or` across different link paths.
+      const [{ data }, { data: moneyIn }] = await Promise.all([
+        db.queryOnce({
+          memberships: {
+            $: { where: { 'user.id': userId } },
+            household: {},
+          },
+          personalTasks: { $: { where: { 'owner.id': userId } } },
+          expenses: {
+            $: { where: { 'paidBy.id': userId } },
+            household: {},
+            paidBy: {},
+          },
+          settlements: {
+            $: { where: { 'fromUser.id': userId } },
+            household: {},
+            fromUser: {},
+          },
+        }),
+        db.queryOnce({
+          expenses: {
+            $: { where: { 'participants.id': userId } },
+            household: {},
+            paidBy: {},
+          },
+          settlements: {
+            $: { where: { 'toUser.id': userId } },
+            household: {},
+            fromUser: {},
+          },
+        }),
+      ]);
+      const byId = <T extends { id: string }>(a: T[], b: T[]) => {
+        const seen = new Map<string, T>();
+        for (const row of [...a, ...b]) seen.set(row.id, row);
+        return [...seen.values()];
+      };
+      const expenses = byId(data.expenses ?? [], moneyIn.expenses ?? []);
+      const settlements = byId(data.settlements ?? [], moneyIn.settlements ?? []);
       const payload = {
         exportedFor: userName,
         exportedAt: new Date().toISOString(),
-        note: 'Shared expenses/settlements live on each household ledger and are not personal data.',
+        note: 'Shared expenses/settlements also stay on each household ledger so the books stay balanced after account deletion — this export is your personal copy.',
         homes: (data.memberships ?? []).map((m) => ({
           home: m.household?.name ?? null,
           role: m.role,
@@ -38,6 +73,21 @@ export function AccountActions({ userId, userName }: { userId: string; userName:
           title: t.title,
           status: t.status,
           createdAt: t.createdAt,
+        })),
+        expenses: expenses.map((e) => ({
+          home: e.household?.name ?? null,
+          title: e.title,
+          amountCents: e.amountCents,
+          currency: e.currency,
+          youPaid: e.paidBy?.id === userId,
+          createdAt: e.createdAt,
+        })),
+        settlements: settlements.map((s) => ({
+          home: s.household?.name ?? null,
+          amountCents: s.amountCents,
+          currency: s.currency,
+          direction: s.fromUser?.id === userId ? 'you_paid' : 'you_received',
+          createdAt: s.createdAt,
         })),
       };
       await Share.share({ message: JSON.stringify(payload, null, 2) });
