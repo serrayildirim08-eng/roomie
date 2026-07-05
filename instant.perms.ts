@@ -17,9 +17,10 @@
 // no longer depends on the row surviving: it reconstructs a former member's
 // balance from the expense/settlement links, which point at $users directly.
 //
-// Known follow-ups (NOT covered here, tracked in docs/CHECKLIST.md):
-//   - Invite code == raw household UUID, so knowing an id is enough to self-
-//     join (membership create is self-only, but not invite-gated yet) — #34.
+// Membership create is invite-gated (#34): the transaction must carry the
+// household's real invite code as a ruleParam, so knowing a household UUID is
+// no longer enough to self-join. Both client paths pass it — JoinHousehold
+// passes the entered code, CreateHousehold passes the code it just generated.
 //
 // Push with:  npx instant-cli@latest push perms
 
@@ -85,7 +86,10 @@ const rules = {
       // SECURITY-CRITICAL: you may only create your OWN membership (else a
       // stranger could join any home / escalate). The `user` link isn't
       // readable in a create rule, so this checks the denormalized userId.
-      create: 'auth.id != null && auth.id == data.userId',
+      // AND the transaction must prove knowledge of the household's invite
+      // code via ruleParams — a bare household UUID no longer self-joins.
+      create:
+        "auth.id != null && auth.id == data.userId && ruleParams.code in data.ref('household.inviteCode')",
       update: 'isSelf',
       delete: 'isSelf || isHouseholdCreator',
     },

@@ -194,6 +194,9 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
           .update({ name: trimmed, creatorId: userId, inviteCode, createdAt: now })
           .link({ creator: userId }),
         db.tx.memberships[membershipId]
+          // The create perm requires proof of the invite code — pass the one
+          // we just generated so the owner membership clears the same gate.
+          .ruleParams({ code: inviteCode })
           .update({
             role: 'owner',
             status: 'active',
@@ -289,6 +292,9 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
       }
       await db.transact(
         db.tx.memberships[id()]
+          // The create perm checks this code against the household's real
+          // inviteCode — without it the join is rejected server-side.
+          .ruleParams({ code: entered })
           .update({
             role: 'member',
             status: 'active',
