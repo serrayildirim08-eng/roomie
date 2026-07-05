@@ -18,6 +18,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Roomie, RoomieFonts } from '@/constants/theme';
+import { track } from '@/lib/analytics';
 import {
   Card,
   ChunkyButton,
@@ -221,6 +222,8 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
         actorName: userName,
         type: 'household_created',
       });
+      // House exists + you're in it = onboarding done (consent-gated, silent).
+      track('onboarding_completed', { value: 'created_home' });
     } catch {
       setError('Could not create your home. Try again.');
     } finally {
@@ -311,6 +314,8 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
         actorName: userName,
         type: 'member_joined',
       });
+      // Joining an existing home is the other way onboarding completes.
+      track('onboarding_completed', { value: 'joined_home' });
     } catch {
       setError('Could not join. Check the code and try again.');
     } finally {

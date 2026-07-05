@@ -1,6 +1,6 @@
 import 'react-native-get-random-values'; // polyfill for InstantDB id generation — must be first
 
-import { ClerkProvider, Show } from '@clerk/expo';
+import { ClerkProvider, Show, useAuth as useClerkAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import {
   Baloo2_600SemiBold,
@@ -14,6 +14,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/nunito';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -21,8 +22,19 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import { AuthScreen } from '@/features/auth/auth-screen';
 import { InstantClerkBridge } from '@/features/auth/instant-clerk-bridge';
+import { initAnalytics } from '@/lib/analytics';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+
+// Boots retention telemetry once per cold start. Rendered only when signed in
+// (needs a Clerk token); everything downstream is consent-gated + best-effort.
+function AnalyticsBoot() {
+  const { getToken } = useClerkAuth();
+  useEffect(() => {
+    initAnalytics(getToken);
+  }, [getToken]);
+  return null;
+}
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -42,6 +54,7 @@ export default function TabLayout() {
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           {/* Signed out → the door. Signed in → the app (tabs). */}
           <Show when="signed-in">
+            <AnalyticsBoot />
             <AnimatedSplashOverlay />
             <AppTabs />
           </Show>

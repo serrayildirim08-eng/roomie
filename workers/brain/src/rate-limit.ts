@@ -37,3 +37,34 @@ export async function overDailyCap(
   await store.put(key, String(next), { expirationTtl: TWO_DAYS_SECONDS });
   return next > cap;
 }
+
+// --- per-minute burst cap (telemetry ingest) -------------------------------
+// Same CounterStore pattern as the daily cap, keyed by user + minute. Used by
+// POST /ingest-event (~10/min per user). Falls back to a per-isolate in-memory
+// counter when KV isn't bound, so the endpoint is never uncapped.
+
+export const MINUTE_CAP = 10;
+const TEN_MINUTES_SECONDS = 600; // stale minute keys self-evict
+
+const memMinute = new Map<string, number>();
+
+export async function overMinuteCap(
+  store: CounterStore | undefined,
+  userId: string,
+  now: Date,
+  cap: number = MINUTE_CAP,
+): Promise<boolean> {
+  const minute = now.toISOString().slice(0, 16); // 2026-07-05T12:34
+  const key = `min:${userId}:${minute}`;
+  if (!store) {
+    // In-memory fallback; keep the map tiny by dropping other minutes.
+    for (const k of memMinute.keys()) if (!k.endsWith(minute)) memMinute.delete(k);
+    const next = (memMinute.get(key) ?? 0) + 1;
+    memMinute.set(key, next);
+    return next > cap;
+  }
+  const prev = Number((await store.get(key)) ?? '0') || 0;
+  const next = prev + 1;
+  await store.put(key, String(next), { expirationTtl: TEN_MINUTES_SECONDS });
+  return next > cap;
+}
