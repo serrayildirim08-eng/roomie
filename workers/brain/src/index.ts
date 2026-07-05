@@ -10,7 +10,8 @@ import { verifyClerkJwt } from './clerk-verify';
 import { cloudflareJson, type CfAiBinding } from './cloudflare-ai';
 import { groqChat, type GroqHttpError } from './groq';
 import { SYSTEM_PROMPT, userPrompt } from './prompt';
-import { overDailyCap, type CounterStore } from './rate-limit';
+import { handleIngest } from './ingest';
+import { overDailyCap, overMinuteCap, type CounterStore } from './rate-limit';
 import { parseDraft, type Draft } from './schema';
 
 interface Env {
@@ -21,6 +22,12 @@ interface Env {
   // cold starts; when absent (local/pre-deploy) we fall back to the crude
   // in-memory global guard below so a leaked token still can't run up a bill.
   RATE_LIMIT?: CounterStore;
+  // Telemetry ingest (/ingest-event) — all three are wrangler secrets, see
+  // wrangler.toml. Missing any → the endpoint answers 503 and drops nothing
+  // sensitive.
+  USER_HASH_SALT?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_SERVICE_KEY?: string;
 }
 
 // Fallback bill-guard for when RATE_LIMIT KV isn't bound yet: a single
@@ -103,15 +110,27 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
     if (url.pathname === '/health') return json({ ok: true });
-    if (url.pathname !== '/draft' || request.method !== 'POST') {
+    if (
+      (url.pathname !== '/draft' && url.pathname !== '/ingest-event') ||
+      request.method !== 'POST'
+    ) {
       return json({ error: 'not found' }, 404);
     }
 
-    // Auth: Clerk session JWT.
+    // Auth: Clerk session JWT (same gate for /draft and /ingest-event).
     const auth = request.headers.get('authorization') ?? '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
     const userId = await verifyClerkJwt(token, env);
     if (!userId) return json({ error: 'unauthorized' }, 401);
+
+    // Telemetry ingest: burst-capped per user, then forwarded to Supabase.
+    if (url.pathname === '/ingest-event') {
+      if (await overMinuteCap(env.RATE_LIMIT, userId, new Date())) {
+        return json({ error: 'rate limited' }, 429);
+      }
+      const { status, body } = await handleIngest(request, env, userId);
+      return json(body, status);
+    }
 
     // Per-user cap when KV is bound; crude global guard otherwise.
     const over = env.RATE_LIMIT

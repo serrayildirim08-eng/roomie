@@ -12,6 +12,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View 
 
 import { Roomie, RoomieFonts } from '@/constants/theme';
 import { parseAmountToCents } from '@/features/money/money-logic';
+import { track, trackFirstDumpOnce } from '@/lib/analytics';
 
 import { applyFragments } from './apply';
 import { BRAIN_URL, fragmentLine } from './types';
@@ -92,6 +93,9 @@ export function BrainInput({
       }
       const body = (await res.json()) as DraftResponse;
       if (!res.ok) throw new Error(body.error ?? `http ${res.status}`);
+      // Funnel telemetry (consent-gated, fire-and-forget, never blocks).
+      track('dump_submitted');
+      void trackFirstDumpOnce();
       setFragments(body.fragments);
       setQuestion(body.question);
       setPhase(body.fragments.length > 0 || body.question ? 'draft' : 'done');
