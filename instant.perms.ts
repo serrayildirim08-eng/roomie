@@ -120,11 +120,15 @@ const rules = {
   },
   // A settlement is a claim "I paid you back", so only the PAYER (fromUser) may
   // record or undo one — a creditor can't forge a debtor's payment (F4). Rows
-  // are otherwise immutable.
+  // are otherwise immutable. The amount must be a sane positive integer number
+  // of cents (cap €10,000) — a forged negative or absurd amount would silently
+  // corrupt everyone's balance math. Creditor acceptance of a settlement is a
+  // known follow-up, not covered here.
   settlements: {
     allow: {
       view: memberOfHousehold,
-      create: "auth.id in data.ref('fromUser.id')",
+      create:
+        "auth.id in data.ref('fromUser.id') && data.amountCents > 0 && data.amountCents <= 1000000",
       update: 'false',
       delete: "auth.id in data.ref('fromUser.id')",
     },
