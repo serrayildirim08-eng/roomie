@@ -43,6 +43,7 @@ export function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +68,10 @@ export function AuthScreen() {
 
   const onSignUp = async () => {
     if (!signUpLoaded) return;
+    if (!ageConfirmed) {
+      setError('You need to be 16 or older to use Roomie.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -74,6 +79,9 @@ export function AuthScreen() {
         username: username.trim(),
         emailAddress: email.trim(),
         password,
+        // Self-declared age gate (16+). Kept on the user record so the claim
+        // is auditable; hard enforcement lives in the Clerk dashboard config.
+        unsafeMetadata: { ageConfirmed16Plus: true, ageConfirmedAt: Date.now() },
       });
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       setPendingVerification(true);
@@ -108,6 +116,7 @@ export function AuthScreen() {
     setPendingVerification(false);
     setPassword('');
     setCode('');
+    setAgeConfirmed(false);
   };
 
   // Sign-up step 2: enter the emailed code.
@@ -170,6 +179,20 @@ export function AuthScreen() {
         value={password}
         onChangeText={setPassword}
       />
+
+      {!isSignIn ? (
+        <Pressable
+          style={styles.ageRow}
+          onPress={() => setAgeConfirmed(!ageConfirmed)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: ageConfirmed }}
+        >
+          <View style={[styles.ageBox, ageConfirmed && styles.ageBoxOn]}>
+            {ageConfirmed ? <Text style={styles.ageCheck}>✓</Text> : null}
+          </View>
+          <Text style={styles.ageLabel}>I’m 16 or older</Text>
+        </Pressable>
+      ) : null}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -261,6 +284,20 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonLabel: { color: Roomie.onAccent, fontSize: 16, fontFamily: RoomieFonts.bodyBold },
+  ageRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
+  ageBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ageBoxOn: { backgroundColor: Roomie.accent, borderColor: Roomie.accent },
+  ageCheck: { color: Roomie.onAccent, fontSize: 14, fontFamily: RoomieFonts.bodyBold },
+  ageLabel: { color: Roomie.sub, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
   link: { alignItems: 'center', paddingVertical: 12 },
   linkLabel: { color: Roomie.sub, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
   error: { color: Roomie.danger, fontSize: 14, fontFamily: RoomieFonts.bodySemi },
