@@ -17,10 +17,6 @@
 // no longer depends on the row surviving: it reconstructs a former member's
 // balance from the expense/settlement links, which point at $users directly.
 //
-// Known follow-ups (NOT covered here, tracked in docs/CHECKLIST.md):
-//   - Invite code == raw household UUID, so knowing an id is enough to self-
-//     join (membership create is self-only, but not invite-gated yet) — #34.
-//
 // Push with:  npx instant-cli@latest push perms
 
 import type { InstantRules } from '@instantdb/react-native';
@@ -28,6 +24,8 @@ import type { InstantRules } from '@instantdb/react-native';
 // Reusable expressions (InstantDB `bind`): name, expression, name, expression…
 const memberOfHousehold = "auth.id in data.ref('household.memberships.user.id')";
 const creatorOfHousehold = "auth.id in data.ref('household.creator.id')";
+// Money rows must carry a sane amount: positive, at most €10,000.00 in cents.
+const validAmount = 'data.amountCents > 0 && data.amountCents <= 1000000';
 
 const rules = {
   // A user is visible to themselves and to anyone sharing a household.
@@ -64,7 +62,9 @@ const rules = {
       // create can't read the `creator` link (born in the same transaction),
       // so it checks the denormalized creatorId field instead.
       create: 'auth.id != null && auth.id == data.creatorId',
-      update: 'isMember',
+      // Only the creator may edit household fields (name, inviteCode) — a
+      // member rewriting the invite code or name is an escalation vector.
+      update: 'isCreator',
       delete: 'isCreator',
     },
     bind: [
@@ -85,7 +85,13 @@ const rules = {
       // SECURITY-CRITICAL: you may only create your OWN membership (else a
       // stranger could join any home / escalate). The `user` link isn't
       // readable in a create rule, so this checks the denormalized userId.
-      create: 'auth.id != null && auth.id == data.userId',
+      // AND joining is invite-gated (#34): you must pass the home's invite
+      // code as a ruleParam, or be the home's creator (owner bootstrap). Both
+      // refs need the household to pre-exist, so the create flows commit the
+      // household FIRST, then the membership in a second transaction.
+      create:
+        'auth.id != null && auth.id == data.userId && ' +
+        "(ruleParams.code in data.ref('household.inviteCode') || auth.id in data.ref('household.creator.id'))",
       update: 'isSelf',
       delete: 'isSelf || isHouseholdCreator',
     },
@@ -113,7 +119,7 @@ const rules = {
   expenses: {
     allow: {
       view: memberOfHousehold,
-      create: memberOfHousehold,
+      create: `${memberOfHousehold} && ${validAmount}`,
       update: memberOfHousehold,
       delete: memberOfHousehold,
     },
@@ -124,7 +130,7 @@ const rules = {
   settlements: {
     allow: {
       view: memberOfHousehold,
-      create: "auth.id in data.ref('fromUser.id')",
+      create: `auth.id in data.ref('fromUser.id') && ${validAmount}`,
       update: 'false',
       delete: "auth.id in data.ref('fromUser.id')",
     },
