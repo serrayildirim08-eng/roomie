@@ -80,14 +80,16 @@ export function HouseholdGate({
   }, [myMembership, userName]);
 
   // Backfill: homes created before short invite codes existed have none. Mint
-  // one on first view so every home has a shareable code.
+  // one on first view so every home has a shareable code. households.update is
+  // creator-only now, so only the creator's device performs the backfill.
   const householdForCode = myMembership?.household;
   useEffect(() => {
     if (!householdForCode || householdForCode.inviteCode) return;
+    if (householdForCode.creatorId !== userId) return;
     void db.transact(
       db.tx.households[householdForCode.id].update({ inviteCode: generateInviteCode() }),
     );
-  }, [householdForCode?.id, householdForCode?.inviteCode]);
+  }, [householdForCode?.id, householdForCode?.inviteCode, householdForCode?.creatorId, userId]);
 
   if (isLoading) {
     return (
@@ -184,16 +186,18 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
       const membershipId = id();
       const inviteCode = generateInviteCode();
       const now = Date.now();
-      // Create the home + your owner membership FIRST and let it commit. The
-      // chore-seed perms check "is this person a member of the household", which
-      // can't resolve while the household, membership and chores are all born in
-      // a single transaction — the membership isn't visible yet. Two steps fixes
-      // it without loosening the rules.
-      await db.transact([
+      // Create the home FIRST and let it commit: the invite-gated
+      // memberships.create rule reads the household's inviteCode / creator via
+      // data.ref, which can't resolve while the household is born in the same
+      // transaction. Same reason chores commit after the membership below.
+      await db.transact(
         db.tx.households[householdId]
           .update({ name: trimmed, creatorId: userId, inviteCode, createdAt: now })
           .link({ creator: userId }),
+      );
+      await db.transact(
         db.tx.memberships[membershipId]
+          .ruleParams({ code: inviteCode })
           .update({
             role: 'owner',
             status: 'active',
@@ -202,7 +206,7 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
             joinedAt: now,
           })
           .link({ household: householdId, user: userId }),
-      ]);
+      );
       // Now that the membership exists, seed the chosen pack's chores quietly.
       await db.transact(
         STARTER_PACKS[homeType].map((name, idx) =>
@@ -287,8 +291,11 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
         setError('No home found for that code.');
         return;
       }
+      // memberships.create is invite-gated: the rule checks this ruleParam
+      // against the household's stored inviteCode.
       await db.transact(
         db.tx.memberships[id()]
+          .ruleParams({ code: entered })
           .update({
             role: 'member',
             status: 'active',

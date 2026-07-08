@@ -239,6 +239,8 @@ export function TasksScreen({ userId }: { userId: string }) {
 
   const [houseDraft, setHouseDraft] = useState('');
   const [mineDraft, setMineDraft] = useState('');
+  // In-flight guard so a fast double-tap can't add the same chore/task twice.
+  const savingRef = useRef(false);
   const [openChoreId, setOpenChoreId] = useState<string | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
 
@@ -300,6 +302,8 @@ export function TasksScreen({ userId }: { userId: string }) {
   })).filter((g) => g.chores.length > 0);
 
   const onAddSuggestion = async (name: string, group: string, hint: string) => {
+    if (savingRef.current) return; // already writing — ignore the double-tap
+    savingRef.current = true;
     const ts = nowMs();
     // Library rows know their room + a soft cadence; both are optional and only
     // ever help (a missing cadence simply means "no due signal"). Typed-by-hand
@@ -313,50 +317,70 @@ export function TasksScreen({ userId }: { userId: string }) {
       cadenceDays?: number;
     } = { name, createdAt: ts, updatedAt: ts, area: inferAreaFromGroup(group) };
     if (cadenceDays != null) fields.cadenceDays = cadenceDays;
-    await db.transact(
-      db.tx.chores[id()].update(fields).link({ household: household.id, turn: userId }),
-    );
-    await logActivity({
-      householdId: household.id,
-      actorId: userId,
-      actorName: myName,
-      type: 'chore_added',
-      metadata: { chore: name },
-    });
+    try {
+      await db.transact(
+        db.tx.chores[id()].update(fields).link({ household: household.id, turn: userId }),
+      );
+      await logActivity({
+        householdId: household.id,
+        actorId: userId,
+        actorName: myName,
+        type: 'chore_added',
+        metadata: { chore: name },
+      });
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   const onAddHouse = async () => {
     const name = houseDraft.trim().replace(/\s+/g, ' ');
     if (!name) return;
+    if (savingRef.current) return; // already writing — ignore the double-tap
+    savingRef.current = true;
     setHouseDraft('');
     const ts = nowMs();
     const choreId = id();
-    await db.transact(
-      db.tx.chores[choreId]
-        .update({ name, createdAt: ts, updatedAt: ts })
-        // The adder takes the first turn — you brought it up, you start.
-        .link({ household: household.id, turn: userId }),
-    );
-    await logActivity({
-      householdId: household.id,
-      actorId: userId,
-      actorName: myName,
-      type: 'chore_added',
-      metadata: { chore: name },
-    });
+    try {
+      await db.transact(
+        db.tx.chores[choreId]
+          .update({ name, createdAt: ts, updatedAt: ts })
+          // The adder takes the first turn — you brought it up, you start.
+          .link({ household: household.id, turn: userId }),
+      );
+      await logActivity({
+        householdId: household.id,
+        actorId: userId,
+        actorName: myName,
+        type: 'chore_added',
+        metadata: { chore: name },
+      });
+    } catch {
+      setHouseDraft(name); // write failed — give the text back so nothing is lost
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   const onAddMine = async () => {
     const title = mineDraft.trim().replace(/\s+/g, ' ');
     if (!title) return;
+    if (savingRef.current) return; // already writing — ignore the double-tap
+    savingRef.current = true;
     setMineDraft('');
     const taskId = id();
-    await db.transact(
-      db.tx.personalTasks[taskId]
-        .update({ title, status: 'open', createdAt: nowMs() })
-        .link({ household: household.id, owner: userId }),
-    );
-    // Personal tasks stay out of the home diary — they're yours.
+    try {
+      await db.transact(
+        db.tx.personalTasks[taskId]
+          .update({ title, status: 'open', createdAt: nowMs() })
+          .link({ household: household.id, owner: userId }),
+      );
+      // Personal tasks stay out of the home diary — they're yours.
+    } catch {
+      setMineDraft(title); // write failed — give the text back so nothing is lost
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   const onMineDone = async (taskId: string) => {
