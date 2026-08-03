@@ -13,6 +13,7 @@
 // removable like any other). Whoever ADDS a chore takes its first turn.
 
 import { id } from '@instantdb/react-native';
+import { Image } from 'expo-image';
 import { useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -39,6 +40,7 @@ import {
 } from '@/components/ui/kit';
 import { Roomie, RoomieFonts } from '@/constants/theme';
 import { logActivity, timeAgo } from '@/features/activity/activity';
+import { pickPhoto, uploadActivityPhoto } from '@/features/activity/photo';
 import { nowMs } from '@/features/money/money-logic';
 import { db } from '@/lib/db';
 
@@ -153,6 +155,8 @@ function ChoreDetail({
   events,
   userId,
   nameById,
+  householdId,
+  onDoneWithProof,
 }: {
   choreId: string;
   doneNote?: string | null;
@@ -160,8 +164,32 @@ function ChoreDetail({
   events: ChoreEventLite[];
   userId: string;
   nameById: Record<string, string>;
+  householdId: string;
+  onDoneWithProof: (opts: { photo?: { fileId: string; path: string } | null; note?: string }) => void;
 }) {
   const [note, setNote] = useState(doneNote ?? '');
+  // Optional proof: one photo + a short line. Both transient until Done.
+  const [proofUri, setProofUri] = useState<string | null>(null);
+  const [proofNote, setProofNote] = useState('');
+  const [proofBusy, setProofBusy] = useState(false);
+
+  const onProofDone = async () => {
+    if (proofBusy) return;
+    setProofBusy(true);
+    let photo: { fileId: string; path: string } | null = null;
+    if (proofUri) {
+      photo = await uploadActivityPhoto(householdId, proofUri);
+      if (!photo) {
+        setProofBusy(false);
+        Alert.alert('Photo didn’t upload', 'The task still counts — Done without it, or try again.');
+        return;
+      }
+    }
+    onDoneWithProof({ photo, note: proofNote });
+    setProofUri(null);
+    setProofNote('');
+    setProofBusy(false);
+  };
 
   // Only write when the text actually changed — avoids a no-op transaction on
   // every blur.
@@ -204,6 +232,37 @@ function ChoreDetail({
         onSubmitEditing={saveNote}
         returnKeyType="done"
       />
+
+      <Text style={styles.detailLabel}>Done with a photo?</Text>
+      <View style={styles.proofRow}>
+        <Pressable
+          style={styles.proofAdd}
+          onPress={() => void pickPhoto().then((uri) => uri && setProofUri(uri))}
+        >
+          {proofUri ? (
+            <Image source={{ uri: proofUri }} style={styles.proofThumb} contentFit="cover" />
+          ) : (
+            <Text style={styles.proofAddLabel}>+ add{'\n'}photo</Text>
+          )}
+        </Pressable>
+        <TextInput
+          style={[styles.noteInput, styles.proofNote]}
+          placeholder="A short note (optional)"
+          placeholderTextColor={Roomie.sub}
+          value={proofNote}
+          onChangeText={setProofNote}
+          maxLength={140}
+        />
+      </View>
+      {proofUri || proofNote.trim() ? (
+        <Pressable
+          style={[styles.proofDone, proofBusy && { opacity: 0.6 }]}
+          onPress={() => void onProofDone()}
+          disabled={proofBusy}
+        >
+          <Text style={styles.proofDoneLabel}>{proofBusy ? 'Uploading…' : 'Done ✓ with proof'}</Text>
+        </Pressable>
+      ) : null}
 
       {events.length === 0 ? (
         <Text style={styles.historyEmpty}>No history yet.</Text>
@@ -430,6 +489,7 @@ export function TasksScreen({ userId }: { userId: string }) {
     choreName: string,
     holderId: string | null,
     eventType: 'done' | 'pass',
+    proof?: { photo?: { fileId: string; path: string } | null; note?: string },
   ) => {
     const ts = nowMs();
     const next = nextTurn(memberIds, holderId);
@@ -453,6 +513,8 @@ export function TasksScreen({ userId }: { userId: string }) {
       actorName: myName,
       type: eventType === 'done' ? 'chore_done' : 'chore_passed',
       metadata: { chore: choreName },
+      photo: proof?.photo,
+      note: proof?.note,
     });
   };
 
@@ -549,6 +611,10 @@ export function TasksScreen({ userId }: { userId: string }) {
               events={events}
               userId={userId}
               nameById={nameById}
+              householdId={household.id}
+              onDoneWithProof={(opts) =>
+                void advance(chore.id, chore.name, holderId, 'done', opts)
+              }
             />
           ) : null}
         </View>
@@ -701,6 +767,35 @@ const styles = StyleSheet.create({
   },
   addButtonLabel: { color: Roomie.onAccent, fontSize: 24, fontFamily: RoomieFonts.bodyBold },
   muted: { fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.sub },
+  proofRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  proofAdd: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: Roomie.rule,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  proofAddLabel: {
+    fontSize: 11,
+    fontFamily: RoomieFonts.bodySemi,
+    color: Roomie.ink3,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  proofThumb: { width: 64, height: 64 },
+  proofNote: { flex: 1 },
+  proofDone: {
+    alignSelf: 'flex-start',
+    backgroundColor: Roomie.forest,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  proofDoneLabel: { color: '#fff', fontSize: 13, fontFamily: RoomieFonts.bodySemi },
   claimTag: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
   choreCard: {
     backgroundColor: Roomie.card,

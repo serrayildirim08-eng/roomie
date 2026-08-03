@@ -48,14 +48,22 @@ export async function logActivity(params: {
   actorName: string;
   type: ActivityType;
   metadata?: Record<string, unknown>;
+  // Optional photo proof + note — plain $files references (see photo.ts).
+  photo?: { fileId: string; path: string } | null;
+  note?: string;
 }) {
   const eventId = id();
   await db.transact(
     db.tx.activityEvents[eventId]
       .update({
         type: params.type,
-        metadata: { actorName: params.actorName, ...(params.metadata ?? {}) },
+        metadata: {
+          actorName: params.actorName,
+          ...(params.note?.trim() ? { note: params.note.trim() } : {}),
+          ...(params.metadata ?? {}),
+        },
         householdId: params.householdId, // create rule reads this, not the link
+        ...(params.photo ? { photoFileId: params.photo.fileId, photoPath: params.photo.path } : {}),
         createdAt: Date.now(),
       })
       .link({ household: params.householdId, actor: params.actorId }),

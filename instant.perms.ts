@@ -33,7 +33,24 @@ const createsInOwnHousehold =
 // Money rows must carry a sane amount: positive, at most €10,000.00 in cents.
 const validAmount = 'data.amountCents > 0 && data.amountCents <= 1000000';
 
+// Files are gated by PATH ONLY ($files rules can't see links). Every upload
+// lives under households/{householdId}/…, so a member may see/create exactly
+// the files whose prefix matches one of their homes. CEL `exists` macro.
+const fileInMyHousehold =
+  "auth.id != null && auth.ref('$user.memberships.household.id')" +
+  ".exists(h, data.path.startsWith('households/' + h + '/'))";
+
 const rules = {
+  // Photos (chore proof, receipts). Append-only like the diary — no deletes
+  // in v1; a wrong photo is Serra-admin territory.
+  $files: {
+    allow: {
+      view: fileInMyHousehold,
+      create: fileInMyHousehold,
+      delete: 'false',
+    },
+  },
+
   // A user is visible to themselves and to anyone sharing a household.
   $users: {
     allow: {

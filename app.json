@@ -46,6 +46,12 @@
         {
           "cameraPermission": "Roomie uses the camera to scan grocery barcodes."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Roomie attaches your photo to the task or receipt you choose."
+        }
       ]
     ],
     "experiments": {

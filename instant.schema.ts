@@ -10,6 +10,13 @@ import { i } from '@instantdb/react-native';
 
 const _schema = i.schema({
   entities: {
+    // `$files` is InstantDB's built-in storage namespace — declared for typing
+    // so feed queries can read photo urls. Access is path-gated in perms.
+    $files: i.entity({
+      path: i.string().unique().indexed(),
+      url: i.string(),
+    }),
+
     // `$users` is InstantDB's built-in auth identity. We only extend it via links.
     $users: i.entity({
       email: i.string().unique().indexed().optional(),
@@ -60,6 +67,11 @@ const _schema = i.schema({
       // on this field via auth.ref. Optional: pre-migration rows predate it.
       householdId: i.string().optional().indexed(),
       metadata: i.json().optional(),
+      // Optional photo proof — plain references, not a link: $files can't be
+      // schema-linked today (SDK types + server both reject), and the
+      // path-scoped $files perms already household-gate reads.
+      photoFileId: i.string().optional(),
+      photoPath: i.string().optional(),
       createdAt: i.date().indexed(),
     }),
 
