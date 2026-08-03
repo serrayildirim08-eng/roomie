@@ -172,6 +172,16 @@ const _schema = i.schema({
       updatedAt: i.date().indexed(),
     }),
 
+    // Money — a receipt photo. Optionally tied to one expense; otherwise it
+    // just lives in the gallery as a quiet archive.
+    receipts: i.entity({
+      fileId: i.string(), // $files id (plain reference, like activityEvents)
+      path: i.string(),
+      label: i.string().optional(), // e.g. "AH · €62,10" — free text
+      householdId: i.string().optional().indexed(), // create-rule gate
+      createdAt: i.date().indexed(),
+    }),
+
     // A quiet, personal heads-up ("Serra already got the milk — no need").
     // One recipient, dismissible. NOT the public diary — that's activityEvents.
     nudges: i.entity({
@@ -258,6 +268,14 @@ const _schema = i.schema({
     billParticipants: {
       forward: { on: 'bills', has: 'many', label: 'participants' },
       reverse: { on: '$users', has: 'many', label: 'billShares' },
+    },
+    receiptHousehold: {
+      forward: { on: 'receipts', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'receipts' },
+    },
+    receiptExpense: {
+      forward: { on: 'receipts', has: 'one', label: 'expense' },
+      reverse: { on: 'expenses', has: 'many', label: 'receipts' },
     },
     nudgeHousehold: {
       forward: { on: 'nudges', has: 'one', label: 'household' },

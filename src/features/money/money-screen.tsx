@@ -38,6 +38,7 @@ import {
   simplifyDebts,
 } from './money-logic';
 import { daysUntilDue, dueDayLabel, monthlyTotalCents, periodOf } from './bills-logic';
+import { ReceiptsGallery } from './receipts';
 
 // "vfya+clerk_test@example.com" → "vfya"
 function emailName(email?: string): string | undefined {
@@ -76,6 +77,7 @@ export function MoneyScreen({ userId }: { userId: string }) {
   const [billPickedIds, setBillPickedIds] = useState<string[] | null>(null);
   const [billBusy, setBillBusy] = useState(false);
   const [billError, setBillError] = useState<string | null>(null);
+  const [receiptsOpen, setReceiptsOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -608,7 +610,12 @@ export function MoneyScreen({ userId }: { userId: string }) {
           </View>
 
           <View style={styles.section}>
-            <SectionHead title="Recent expenses" />
+            <View style={styles.billsHead}>
+              <SectionHead title="Recent expenses" />
+              <Pressable onPress={() => setReceiptsOpen(true)} hitSlop={6}>
+                <Text style={styles.receiptsLink}>🧾 Receipts</Text>
+              </Pressable>
+            </View>
             {recentExpenses.length === 0 ? (
               <Card pad>
                 <Text style={styles.muted}>Nothing logged yet.</Text>
@@ -642,6 +649,13 @@ export function MoneyScreen({ userId }: { userId: string }) {
           </View>
         </View>
       </ScrollView>
+
+      <ReceiptsGallery
+        householdId={household.id}
+        visible={receiptsOpen}
+        onClose={() => setReceiptsOpen(false)}
+        recentExpenses={recentExpenses.slice(0, 3).map((e) => ({ id: e.id, title: e.title }))}
+      />
 
       {billSheet ? (
         <Modal visible transparent animationType="fade" onRequestClose={() => setBillSheet(false)}>
@@ -833,6 +847,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   settlePinkLabel: { color: '#fff', fontSize: 13.5, fontFamily: RoomieFonts.display },
+  receiptsLink: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.forest },
   billsHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   billsTotal: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink3 },
   billNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },

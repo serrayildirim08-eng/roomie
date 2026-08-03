@@ -209,6 +209,16 @@ const rules = {
     },
   },
 
+  // Receipt photos — same trust as the diary; append-only, no edits.
+  receipts: {
+    allow: {
+      view: memberOfHousehold,
+      create: createsInOwnHousehold,
+      update: 'false',
+      delete: memberOfHousehold,
+    },
+  },
+
   // Personal heads-ups — only the recipient can read or dismiss; any
   // housemate may create one (that's the point: "I got it, no need").
   nudges: {
