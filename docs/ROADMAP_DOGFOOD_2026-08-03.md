@@ -1,5 +1,9 @@
 # Roomie Dogfood Roadmap — 2026-08-03
 
+DURUM (2026-08-03 gece): Faz 0 ✅ · Faz 0.5 ✅ · Faz 1 ✅ · Faz 2.1 ✅ · Faz 2.2 ✅
+(hepsi `feat/dogfood-fixes-faz0`, cihaza inmesi build 6 bekliyor) · Faz 2.3 OCR:
+native modül kararı bekliyor (build gerektirir) · Faz 3 takvim: sırada.
+
 Kaynak: Serra + Betül dogfood'u (TestFlight 0.1.0 (5) canlı). Sıralama kuralı:
 önce dogfood'u kıran şeyler, sonra mevcut modeli büyütenler, en son yeni altyapı.
 
