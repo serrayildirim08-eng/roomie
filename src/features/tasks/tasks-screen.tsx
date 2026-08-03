@@ -234,6 +234,8 @@ export function TasksScreen({ userId }: { userId: string }) {
           events: { $: { order: { at: 'desc' }, limit: 12 }, by: {} },
         },
         personalTasks: { $: { where: { status: 'open' } }, owner: {} },
+        // Shopping I said I'd get — a promise is a task.
+        pantryItems: { $: { where: { status: 'out' } }, claimedBy: {} },
       },
     },
   });
@@ -287,6 +289,8 @@ export function TasksScreen({ userId }: { userId: string }) {
   const myTasks = household.personalTasks
     .filter((t) => t.owner?.id === userId)
     .sort((a, b) => Number(a.createdAt) - Number(b.createdAt));
+  // "I'll get it" promises live here too — one glance covers errands.
+  const myClaims = (household.pantryItems ?? []).filter((it) => it.claimedBy?.id === userId);
 
   const taskStats = [
     { k: 'Your turn', v: String(myChores.length) },
@@ -383,6 +387,32 @@ export function TasksScreen({ userId }: { userId: string }) {
     } finally {
       savingRef.current = false;
     }
+  };
+
+  // Same write as Kitchen's "Got it ✓" (self-claim case): restock + purchase
+  // log + diary line. Kept inline; if a third caller appears, extract a helper.
+  const onClaimGot = async (itemId: string, itemName: string, normalizedName: string) => {
+    const ts = nowMs();
+    try {
+      await db.transact([
+        db.tx.pantryItems[itemId]
+          .update({ status: 'in', addedAt: ts, updatedAt: ts })
+          .unlink({ claimedBy: userId }),
+        db.tx.purchases[id()]
+          .update({ itemName: normalizedName, at: ts, householdId: household.id })
+          .link({ household: household.id, by: userId }),
+      ]);
+    } catch {
+      Alert.alert('Could not save', 'That tap didn’t stick — try again in a moment.');
+      return;
+    }
+    await logActivity({
+      householdId: household.id,
+      actorId: userId,
+      actorName: myName,
+      type: 'pantry_got',
+      metadata: { item: itemName },
+    });
   };
 
   const onMineDone = async (taskId: string) => {
@@ -540,6 +570,17 @@ export function TasksScreen({ userId }: { userId: string }) {
           <View style={styles.section}>
             <SectionHead title="Mine" />
             {myChores.map(renderChore)}
+            {myClaims.map((it) => (
+              <View key={it.id} style={[styles.choreCard, styles.mineCard]}>
+                <View style={styles.choreRow}>
+                  <View style={[styles.turnBar, styles.turnBarMine]} />
+                  <Text style={[styles.choreName, styles.choreNameWrap]}>
+                    Get {it.name} <Text style={styles.claimTag}>🛒 you said you’d get it</Text>
+                  </Text>
+                  <DoneButton onPress={() => onClaimGot(it.id, it.name, it.normalizedName)} />
+                </View>
+              </View>
+            ))}
             {myTasks.map((t) => (
               <SwipeRow key={t.id} onRemove={() => onMineDelete(t.id)}>
                 <View style={[styles.choreCard, styles.mineCard]}>
@@ -551,7 +592,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                 </View>
               </SwipeRow>
             ))}
-            {myTasks.length === 0 && myChores.length === 0 ? (
+            {myTasks.length === 0 && myChores.length === 0 && myClaims.length === 0 ? (
               <Text style={styles.muted}>Nothing on your plate. 🤍</Text>
             ) : null}
             <View style={styles.addRow}>
@@ -660,6 +701,7 @@ const styles = StyleSheet.create({
   },
   addButtonLabel: { color: Roomie.onAccent, fontSize: 24, fontFamily: RoomieFonts.bodyBold },
   muted: { fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.sub },
+  claimTag: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
   choreCard: {
     backgroundColor: Roomie.card,
     borderRadius: 18,

@@ -146,6 +146,17 @@ const _schema = i.schema({
       at: i.date().indexed(),
     }),
 
+    // A quiet, personal heads-up ("Serra already got the milk — no need").
+    // One recipient, dismissible. NOT the public diary — that's activityEvents.
+    nudges: i.entity({
+      type: i.string(), // 'claim_covered'
+      metadata: i.json().optional(), // { item, gotByName }
+      householdId: i.string().optional().indexed(), // create-rule gate
+      toUserId: i.string().optional().indexed(), // the only reader
+      createdAt: i.date().indexed(),
+      seenAt: i.date().optional(), // set on dismiss
+    }),
+
     // Tasks — personal to-dos. One owner, no rotation. Scoped to the
     // household so "need a favor" can read them later.
     personalTasks: i.entity({
@@ -210,6 +221,10 @@ const _schema = i.schema({
     },
 
     // Kitchen links.
+    nudgeHousehold: {
+      forward: { on: 'nudges', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'nudges' },
+    },
     pantryHousehold: {
       forward: { on: 'pantryItems', has: 'one', label: 'household' },
       reverse: { on: 'households', has: 'many', label: 'pantryItems' },

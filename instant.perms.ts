@@ -181,6 +181,17 @@ const rules = {
     },
   },
 
+  // Personal heads-ups — only the recipient can read or dismiss; any
+  // housemate may create one (that's the point: "I got it, no need").
+  nudges: {
+    allow: {
+      view: 'auth.id == data.toUserId',
+      create: createsInOwnHousehold,
+      update: 'auth.id == data.toUserId',
+      delete: 'auth.id == data.toUserId',
+    },
+  },
+
   // Personal to-dos — private to their owner until a 'need a favor' feature
   // opens them to the household later.
   personalTasks: {

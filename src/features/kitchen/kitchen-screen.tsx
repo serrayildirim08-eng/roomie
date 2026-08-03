@@ -154,6 +154,13 @@ function SwipeRow({ children, onRemove }: { children: ReactNode; onRemove: () =>
   );
 }
 
+
+// Tiny safe reader for nudge metadata.
+function metaStr(metadata: unknown, key: string): string | null {
+  return metadata && typeof metadata === 'object' && key in metadata
+    ? String((metadata as Record<string, unknown>)[key])
+    : null;
+}
 export function KitchenScreen({ userId }: { userId: string }) {
   const insets = useSafeAreaInsets();
   const { isLoading, error, data } = db.useQuery({
@@ -163,6 +170,10 @@ export function KitchenScreen({ userId }: { userId: string }) {
         memberships: { $: { where: { status: 'active' } }, user: {} },
         pantryItems: { claimedBy: {} },
       },
+    },
+    // My quiet heads-ups ("she already got it") — newest first, unseen only.
+    nudges: {
+      $: { where: { toUserId: userId, seenAt: { $isNull: true } }, order: { createdAt: 'desc' } },
     },
   });
 
@@ -216,6 +227,7 @@ export function KitchenScreen({ userId }: { userId: string }) {
   }
 
   const household = data.memberships[0]?.household;
+  const myNudges = data?.nudges ?? [];
   if (!household) {
     return (
       <Centered>
@@ -351,13 +363,18 @@ export function KitchenScreen({ userId }: { userId: string }) {
     });
   };
 
-  const onGotIt = async (itemId: string, itemName: string, normalizedName: string) => {
+  const onGotIt = async (
+    itemId: string,
+    itemName: string,
+    normalizedName: string,
+    claimerId?: string | null,
+  ) => {
     const ts = nowMs();
     const purchaseId = id();
     await db.transact([
       db.tx.pantryItems[itemId]
         .update({ status: 'in', addedAt: ts, updatedAt: ts })
-        .unlink({ claimedBy: userId }),
+        .unlink({ claimedBy: claimerId ?? userId }),
       // Invisible foundation: every restock is a timestamped purchase event.
       db.tx.purchases[purchaseId]
         .update({ itemName: normalizedName, at: ts, householdId: household.id })
@@ -370,6 +387,21 @@ export function KitchenScreen({ userId }: { userId: string }) {
       type: 'pantry_got',
       metadata: { item: itemName },
     });
+    // Someone else had claimed it — leave THEM a quiet heads-up so they don't
+    // buy it twice. Personal nudge, not diary noise.
+    if (claimerId && claimerId !== userId) {
+      void db.transact(
+        db.tx.nudges[id()]
+          .update({
+            type: 'claim_covered',
+            metadata: { item: itemName, gotByName: myName },
+            householdId: household.id,
+            toUserId: claimerId,
+            createdAt: ts,
+          })
+          .link({ household: household.id }),
+      );
+    }
     // Calm, transient ack — fades on its own; the Money hop still pops below.
     if (whisperTimer.current) clearTimeout(whisperTimer.current);
     setWhisper('Got it — house remembers.');
@@ -535,9 +567,19 @@ export function KitchenScreen({ userId }: { userId: string }) {
                               <DietBadges tags={dietTagsOf(it.dietTags)} />
                             </View>
                             {claimerId && !mine ? (
-                              <Text style={styles.claimedNote}>
-                                {nameById[claimerId]} is getting it
-                              </Text>
+                              <View style={styles.claimedCol}>
+                                <Text style={styles.claimedNote}>
+                                  {nameById[claimerId]} is getting it
+                                </Text>
+                                <Pressable
+                                  style={styles.gotIt}
+                                  onPress={() =>
+                                    onGotIt(it.id, it.name, it.normalizedName, claimerId)
+                                  }
+                                >
+                                  <Text style={styles.gotItLabel}>I got it ✓</Text>
+                                </Pressable>
+                              </View>
                             ) : mine ? (
                               <Pressable
                                 style={styles.gotIt}
@@ -696,6 +738,29 @@ export function KitchenScreen({ userId }: { userId: string }) {
           )}
         </View>
       </ScrollView>
+
+      {myNudges.length > 0 ? (
+        <View style={styles.nudgeWrap}>
+          {myNudges.slice(0, 1).map((n) => {
+            const item = metaStr(n.metadata, 'item');
+            const who = metaStr(n.metadata, 'gotByName');
+            return (
+              <View key={n.id} style={styles.nudge}>
+                <Text style={styles.nudgeText}>
+                  {who ?? 'Someone'} already got {item ? `“${item}”` : 'it'} — no need. 🌿
+                </Text>
+                <Pressable
+                  onPress={() =>
+                    void db.transact(db.tx.nudges[n.id].update({ seenAt: nowMs() }))
+                  }
+                >
+                  <Text style={styles.nudgeDismiss}>Okay</Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
 
       {moveTarget ? (
         <Modal
@@ -964,6 +1029,20 @@ const styles = StyleSheet.create({
   swipeRemoveX: { color: '#fff', fontSize: 16 },
   swipeRemoveLabel: { color: '#fff', fontSize: 12, fontFamily: RoomieFonts.bodyBold },
 
+  claimedCol: { alignItems: 'flex-end', gap: 6 },
+  nudgeWrap: { position: 'absolute', left: 16, right: 16, top: 8 },
+  nudge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    backgroundColor: Roomie.sageSoft,
+    borderRadius: Radius.chip,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  nudgeText: { flex: 1, fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sage },
+  nudgeDismiss: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   moveBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(20, 30, 24, 0.45)',
