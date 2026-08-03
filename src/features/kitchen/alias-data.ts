@@ -80,6 +80,10 @@ const ITEM_EMOJI: Record<string, string> = {
   beer: '🍺',
   wine: '🍷',
   soda: '🥤',
+  fanta: '🥤',
+  sprite: '🥤',
+  'iced tea': '🥤',
+  'canned beans': '🫘',
   rice: '🍚',
   pasta: '🍝',
   honey: '🍯',
@@ -219,12 +223,16 @@ function buildAliasTable(): AliasTable {
   add('soy milk', ['soy milk','soymilk'], 'drinks', 10);
   add('beer', ['beer','bira','lager','ipa'], 'drinks', 120);
   add('wine', ['wine','şarap','sarap','red wine','white wine'], 'drinks', 730);
-  add('soda', ['soda','gazoz','kola','cola','coke','pepsi'], 'drinks', 270);
+  add('soda', ['soda','gazoz','kola','cola','coke','coca-cola','coca cola','pepsi','pepsi cola','coke zero','diet coke','cola zero','soft drink','fizzy drink'], 'drinks', 270);
+  add('fanta', ['fanta','orange soda','portakallı gazoz','portakalli gazoz'], 'drinks', 270);
+  add('sprite', ['sprite','7up','seven up','lemon lime soda','limonlu gazoz'], 'drinks', 270);
+  add('iced tea', ['iced tea','ice tea','ice-tea','buzlu çay','buzlu cay','soğuk çay','soguk cay','fuze tea','lipton ice tea'], 'drinks', 270);
   add('kombucha', ['kombucha'], 'drinks', 21);
   add('sparkling', ['sparkling','perrier','la croix'], 'drinks', 270);
   add('lemonade', ['lemonade','limonata'], 'drinks', 10);
   add('ayran', ['ayran'], 'drinks', 14);
-  add('energy drink', ['energy drink','red bull','monster'], 'drinks', 365);
+  add('energy drink', ['energy drink','red bull','redbull','monster','monster energy','rockstar'], 'drinks', 365);
+  add('capri sun', ['capri sun','caprisun','capri-sun'], 'drinks', 365);
   // Pantry
   add('rice', ['rice','pirinç','pirinc','basmati','jasmine'], 'pantry', 730);
   add('pasta', ['pasta','makarna','spaghetti','penne','fusilli'], 'pantry', 730);
@@ -241,7 +249,7 @@ function buildAliasTable(): AliasTable {
   add('soy sauce', ['soy sauce','soya sosu'], 'pantry', 1095);
   add('tomato sauce', ['tomato sauce','salça','salca','marinara','pasta sauce'], 'pantry', 10);
   add('tomato paste', ['tomato paste'], 'pantry', 365);
-  add('ketchup', ['ketchup','ketçap','ketcap'], 'pantry', 180);
+  add('ketchup', ['ketchup','ketçap','ketcap','tomato ketchup','heinz','heinz ketchup'], 'pantry', 180);
   add('mayo', ['mayo','mayonez','mayonnaise'], 'pantry', 60);
   add('mustard', ['mustard','hardal','dijon'], 'pantry', 365);
   add('honey', ['honey','bal'], 'pantry', 3650);
@@ -259,6 +267,7 @@ function buildAliasTable(): AliasTable {
   add('black bean', ['black bean','black beans','fasulye'], 'pantry', 1095);
   add('white bean', ['white bean','kuru fasulye','cannellini'], 'pantry', 1095);
   add('canned tomato', ['canned tomato','diced tomatoes','crushed tomatoes'], 'pantry', 730);
+  add('canned beans', ['canned beans','baked beans','konserve fasulye'], 'pantry', 730);
   add('chicken stock', ['chicken stock','tavuk suyu','chicken broth'], 'pantry', 365);
   add('beef stock', ['beef stock','beef broth'], 'pantry', 365);
   add('nuts', ['nuts','badem','ceviz','kaju','almonds'], 'pantry', 365);

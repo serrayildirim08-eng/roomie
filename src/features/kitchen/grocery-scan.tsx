@@ -40,6 +40,9 @@ interface ScanLine {
   category: string;
   shelfLifeDays: number | null;
   barcode?: string;
+  // Diet flags the scanned label declared (vegan / gluten-free / …). Barcode-only
+  // — typed/manual items leave this unset.
+  dietTags?: string[];
 }
 
 interface ExistingItem {
@@ -137,9 +140,12 @@ export function GroceryScan({
       addLine({
         name: product.name,
         normalizedName: r.normalizedName,
-        category: r.category,
+        // The barcode's own category wins when the label carried one; fall back
+        // to the name-derived alias category otherwise.
+        category: product.category ?? r.category,
         shelfLifeDays: r.shelfLifeDays,
         barcode: code,
+        dietTags: product.dietTags,
       });
     },
     [addLine],
@@ -220,6 +226,7 @@ export function GroceryScan({
               addedAt: ts,
               updatedAt: ts,
               ...(line.barcode ? { barcode: line.barcode } : {}),
+              ...(line.dietTags?.length ? { dietTags: line.dietTags } : {}),
             })
             .unlink({ claimedBy: existing.claimedBy?.id ?? '' }),
         );
@@ -233,6 +240,7 @@ export function GroceryScan({
               status: 'in',
               shelfLifeDays: line.shelfLifeDays ?? undefined,
               barcode: line.barcode ?? undefined,
+              dietTags: line.dietTags?.length ? line.dietTags : undefined,
               addedAt: ts,
               createdAt: ts,
               updatedAt: ts,

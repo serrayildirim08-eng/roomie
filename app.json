@@ -4,11 +4,16 @@
     "slug": "roomie",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/roomie-icon.png",
     "scheme": "roomie",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.serrayildirim.roomie",
+      "icon": "./assets/images/roomie-icon.png",
+      "buildNumber": "5",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +33,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#1A6B43",
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76

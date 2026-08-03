@@ -9,7 +9,7 @@
 // "signals/future" API; the legacy entry keeps the documented create/verify
 // flow and runs in pure JS (Expo Go friendly).
 import { useSignIn, useSignUp } from '@clerk/expo/legacy';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -25,6 +25,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Roomie, RoomieFonts } from '@/constants/theme';
 
 type Mode = 'signIn' | 'signUp';
+
+// Dev-only auto login so the simulator skips the door. Relies on Clerk test
+// mode on the dev instance: +clerk_test emails verify with code 424242, no
+// real email sent. Stripped from release builds via __DEV__. Throwaway
+// credentials — dev instance only, never a real account.
+const DEV_AUTO_LOGIN = __DEV__;
+const DEV_USER = {
+  username: 'devbypass',
+  email: 'devbypass+clerk_test@example.com',
+  password: 'roomie-dev-2026',
+};
 
 function messageFromError(err: unknown): string {
   if (err && typeof err === 'object' && 'errors' in err) {
@@ -46,6 +57,46 @@ export function AuthScreen() {
   const [pendingVerification, setPendingVerification] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const autoLoginTried = useRef(false);
+  useEffect(() => {
+    if (!DEV_AUTO_LOGIN || autoLoginTried.current) return;
+    if (!signInLoaded || !signUpLoaded || !signIn || !signUp) return;
+    autoLoginTried.current = true;
+    (async () => {
+      setBusy(true);
+      try {
+        // First try signing in — the dev user exists after the first run.
+        const res = await signIn.create({
+          identifier: DEV_USER.username,
+          password: DEV_USER.password,
+        });
+        if (res.status === 'complete') {
+          await setSignInActive({ session: res.createdSessionId });
+          return;
+        }
+      } catch {
+        // Not there yet — create it via sign-up + test-mode verification code.
+        try {
+          await signUp.create({
+            username: DEV_USER.username,
+            emailAddress: DEV_USER.email,
+            password: DEV_USER.password,
+          });
+          await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+          const res = await signUp.attemptEmailAddressVerification({ code: '424242' });
+          if (res.status === 'complete') {
+            await setSignUpActive({ session: res.createdSessionId });
+            return;
+          }
+        } catch (err) {
+          setError(messageFromError(err));
+        }
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [signInLoaded, signUpLoaded, signIn, signUp, setSignInActive, setSignUpActive]);
 
   const onSignIn = async () => {
     if (!signInLoaded) return;

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roomie — Pantry redesign mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --canvas:#F4F1EA; --card:#FFFFFF; --ink:#16201B; --sub:#566159; --ink3:#8A958F;
+    --hair:#E8E3D9; --forest:#1A6B43; --forest2:#268A57; --forestInk:#0F3D27;
+    --dropGreen:#114E30; --coral:#FF6A3D; --pink:#FF4D8D; --gold:#FFCB2E; --sageSoft:#E6F4EC; --danger:#E0452B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E2D6;font-family:'Nunito',sans-serif;color:var(--ink);
+    padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:6px}
+  h1{font-family:'Baloo 2';font-weight:800;color:var(--forestInk);font-size:26px}
+  .sub{color:var(--sub);font-size:14px;margin-bottom:26px;max-width:640px;text-align:center;line-height:1.5}
+  .row{display:flex;gap:34px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .cap{font-family:'Baloo 2';font-weight:700;color:var(--forestInk);font-size:15px}
+  .capn{color:var(--ink3);font-size:12px;max-width:320px;text-align:center;line-height:1.5}
+
+  .phone{width:390px;height:800px;background:var(--canvas);border-radius:46px;
+    box-shadow:0 0 0 12px #1c1c1e,0 22px 54px rgba(0,0,0,.30);overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:132px;height:32px;background:#1c1c1e;border-radius:19px;z-index:9}
+
+  /* ---- signature forest hero ---- */
+  .hero{background:linear-gradient(160deg,#21744A 0%,#185A39 60%,#114E30 100%);
+    border-radius:0 0 30px 30px;padding:52px 22px 20px;color:#fff;position:relative}
+  .hchip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:9px 12px;width:fit-content;margin-bottom:14px}
+  .hchip .he{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.16);display:grid;place-items:center;font-size:15px}
+  .hchip b{font-family:'Baloo 2';font-weight:700;font-size:14px}
+  .hchip span{display:block;font-size:11px;color:rgba(255,255,255,.7)}
+  .avatar{margin-left:auto;width:34px;height:34px;border-radius:50%;background:var(--coral);border:2px solid #fff3;
+    display:grid;place-items:center;color:#fff;font-family:'Baloo 2';font-weight:800;font-size:14px}
+  .eyebrow{font-family:'Nunito';font-weight:800;font-size:11px;letter-spacing:1.6px;color:rgba(255,255,255,.65);text-transform:uppercase}
+  .htitle{font-family:'Baloo 2';font-weight:800;font-size:26px;line-height:1.12;margin-top:3px}
+  .statstrip{display:flex;gap:22px;margin-top:16px}
+  .stat b{font-family:'Baloo 2';font-weight:800;font-size:20px;display:block;line-height:1}
+  .stat span{font-size:11px;color:rgba(255,255,255,.7)}
+
+  .body{flex:1;overflow:hidden;padding:16px 18px 0;display:flex;flex-direction:column;gap:14px}
+
+  /* segmented control */
+  .seg{display:flex;background:#EAE5DA;border-radius:16px;padding:4px;gap:4px}
+  .seg div{flex:1;text-align:center;padding:10px;border-radius:12px;font-family:'Baloo 2';font-weight:700;font-size:14px;color:var(--sub)}
+  .seg .on{background:#fff;color:var(--forest);box-shadow:0 2px 5px rgba(20,40,30,.08)}
+  .seg .badge{display:inline-block;min-width:18px;font-size:11px;background:var(--sageSoft);color:var(--forest);border-radius:999px;padding:0 5px;margin-left:5px;vertical-align:1px}
+  .seg .on .badge{background:var(--sageSoft)}
+
+  .subhead{font-family:'Nunito';font-weight:800;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink3);margin:2px 2px 0}
+  .card{background:var(--card);border-radius:22px;padding:6px 4px;box-shadow:0 2px 0 var(--hair),0 8px 18px rgba(20,40,30,.05)}
+
+  /* roomier row */
+  .item{display:flex;align-items:center;gap:13px;padding:13px 14px;border-bottom:1px solid var(--hair);position:relative}
+  .item:last-child{border-bottom:none}
+  .emoji{width:44px;height:44px;border-radius:14px;background:var(--sageSoft);display:grid;place-items:center;font-size:22px;flex-shrink:0}
+  .meta{flex:1;min-width:0}
+  .iname{font-family:'Baloo 2';font-weight:700;font-size:16px;color:var(--ink)}
+  .iname.dim{color:var(--sub)}
+  .icap{color:var(--ink3);font-size:12px;margin-top:1px}
+  .agepill{background:#FFF0E6;color:var(--coral);font-family:'Baloo 2';font-weight:700;font-size:11px;padding:4px 11px;border-radius:999px;flex-shrink:0}
+
+  /* one primary action, right aligned */
+  .act{flex-shrink:0;border-radius:13px;padding:9px 15px;font-family:'Baloo 2';font-weight:700;font-size:14px}
+  .act.ghost{border:1.5px solid var(--hair);background:#fff;color:var(--ink)}
+  .act.claim{background:var(--forest);color:#fff}
+  .act.got{background:var(--forest2);color:#fff}
+  .claimed{flex-shrink:0;font-family:'Nunito';font-weight:700;font-size:12.5px;color:var(--forest2)}
+
+  /* still-here inline strip */
+  .still{display:flex;align-items:center;gap:10px;padding:0 14px 14px 71px;margin-top:-4px}
+  .still .t{flex:1;font-size:13px;color:var(--sub);font-weight:600}
+  .mini{border-radius:11px;padding:6px 13px;font-family:'Baloo 2';font-weight:700;font-size:13px}
+  .mini.y{border:1.5px solid var(--hair);background:#fff;color:var(--ink)}
+  .mini.o{color:var(--sub)}
+
+  /* swiped-open row reveal */
+  .swipe{position:relative;overflow:hidden;border-bottom:1px solid var(--hair)}
+  .swipe .del{position:absolute;top:0;right:0;bottom:0;width:88px;background:var(--danger);color:#fff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:'Baloo 2';font-weight:700;font-size:12px}
+  .swipe .front{transform:translateX(-88px);background:#fff}
+  .swipe .front .item{border-bottom:none}
+
+  .addrow{display:flex;gap:9px}
+  .field{flex:1;border:1.5px solid var(--hair);border-radius:15px;padding:13px 15px;color:var(--ink3);font-family:'Nunito';font-weight:600;font-size:15px;background:#fff}
+  .plus{width:52px;border-radius:15px;background:var(--forest);color:#fff;display:grid;place-items:center;font-family:'Baloo 2';font-weight:700;font-size:24px}
+  .btnG{background:var(--forest);color:#fff;font-family:'Baloo 2';font-weight:700;font-size:16px;
+    text-align:center;padding:16px;border-radius:18px;box-shadow:0 5px 0 var(--dropGreen)}
+
+  /* money bridge */
+  .bridge{background:var(--sageSoft);border-radius:20px;padding:15px 16px}
+  .bridge .bt{font-family:'Baloo 2';font-weight:700;font-size:15px;color:var(--forestInk)}
+  .bridge .br{display:flex;gap:9px;align-items:center;margin-top:11px}
+  .bridge .bf{flex:1;border:1.5px solid #cfe6d8;border-radius:13px;padding:11px 13px;color:var(--ink3);font-weight:700;background:#fff;font-family:'Nunito'}
+  .bridge .badd{background:var(--forest);color:#fff;border-radius:12px;padding:11px 17px;font-family:'Baloo 2';font-weight:700;font-size:14px}
+  .bridge .bskip{color:var(--sub);font-weight:700;font-size:14px;padding:11px 6px}
+  .bridge .bh{font-size:12px;color:var(--sub);margin-top:9px}
+
+  .empty{padding:26px 18px;text-align:center;color:var(--sub);font-size:14px;font-weight:600;line-height:1.5}
+
+  .tabbar{position:absolute;bottom:16px;left:16px;right:16px;height:64px;background:#fff;border-radius:26px;
+    box-shadow:0 6px 18px rgba(20,40,30,.10);display:flex;align-items:center;justify-content:space-around;font-size:11px;color:var(--ink3);font-family:'Baloo 2';font-weight:700}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .tab.on{color:var(--forest)}
+  .tab .ic{font-size:20px}
+  .whisper{position:absolute;left:0;right:0;bottom:96px;display:flex;justify-content:center}
+  .whisper span{background:var(--sageSoft);color:var(--forest);font-weight:700;font-size:13px;padding:9px 16px;border-radius:999px}
+</style>
+</head>
+<body>
+  <h1>Roomie · Pantry redesign</h1>
+  <div class="sub">03 Jul 2026 — proposal for a calmer pantry. Split the two jobs into a segment, roomier rows with ONE primary action, remove hidden behind swipe, freshness grouped + a labelled "getting low" pill instead of an unexplained dot. Same logic, same green editorial house style. See <b>DIRECTION.md</b>.</div>
+
+  <div class="row">
+
+    <!-- 1 · IN PANTRY tab -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="hero">
+          <div class="hchip"><div class="he">🏡</div><div><b>Testflat</b><span>you + Kel</span></div><div class="avatar">S</div></div>
+          <div class="eyebrow">Kitchen</div>
+          <div class="htitle">2 to grab next run</div>
+          <div class="statstrip">
+            <div class="stat"><b>2</b><span>To buy</span></div>
+            <div class="stat"><b>8</b><span>In pantry</span></div>
+            <div class="stat"><b>2</b><span>Running low</span></div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="seg">
+            <div>To buy <span class="badge">2</span></div>
+            <div class="on">In pantry <span class="badge">8</span></div>
+          </div>
+
+          <div class="subhead">Running low</div>
+          <div class="card">
+            <div class="item">
+              <div class="emoji">🥛</div>
+              <div class="meta"><div class="iname dim">Milk</div><div class="icap">about 2 days left</div></div>
+              <span class="agepill">getting low</span>
+              <div class="act ghost">Ran out</div>
+            </div>
+            <div class="item">
+              <div class="emoji">🥬</div>
+              <div class="meta"><div class="iname dim">Spinach</div><div class="icap">use soon</div></div>
+              <span class="agepill">getting low</span>
+              <div class="act ghost">Ran out</div>
+            </div>
+          </div>
+
+          <div class="subhead">Well stocked</div>
+          <div class="card">
+            <div class="item"><div class="emoji">🥚</div><div class="meta"><div class="iname">Eggs</div><div class="icap">still fresh</div></div><div class="act ghost">Ran out</div></div>
+            <div class="item"><div class="emoji">🧀</div><div class="meta"><div class="iname">Cheese</div><div class="icap">still fresh</div></div><div class="act ghost">Ran out</div></div>
+            <div class="item"><div class="emoji">🍝</div><div class="meta"><div class="iname">Pasta</div><div class="icap">in the cupboard</div></div><div class="act ghost">Ran out</div></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><span class="ic">🏠</span>Home</div>
+          <div class="tab on"><span class="ic">🧺</span>Kitchen</div>
+          <div class="tab"><span class="ic">✓</span>Tasks</div>
+          <div class="tab"><span class="ic">💶</span>Money</div>
+        </div>
+      </div>
+      <div class="cap">1 · In pantry</div>
+      <div class="capn">One list at a time. Low items float to the top with a labelled "getting low" pill (was a bare dot). One clear action — "Ran out" (was "Out") — moves it to the buy list.</div>
+    </div>
+
+    <!-- 2 · TO BUY tab -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="hero">
+          <div class="hchip"><div class="he">🏡</div><div><b>Testflat</b><span>you + Kel</span></div><div class="avatar">S</div></div>
+          <div class="eyebrow">Kitchen · shopping</div>
+          <div class="htitle">2 to grab next run</div>
+          <div class="statstrip">
+            <div class="stat"><b>2</b><span>To buy</span></div>
+            <div class="stat"><b>8</b><span>In pantry</span></div>
+            <div class="stat"><b>2</b><span>Running low</span></div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="seg">
+            <div class="on">To buy <span class="badge">2</span></div>
+            <div>In pantry <span class="badge">8</span></div>
+          </div>
+
+          <div class="addrow">
+            <div class="field">Add something… (süt, coffee)</div>
+            <div class="plus">+</div>
+          </div>
+          <div class="btnG">🛒  Start shopping</div>
+
+          <div class="card">
+            <div class="item">
+              <div class="emoji">🥛</div>
+              <div class="meta"><div class="iname">Milk</div><div class="icap">on the list</div></div>
+              <div class="act got">Got it ✓</div>
+            </div>
+            <div class="item">
+              <div class="emoji">🍞</div>
+              <div class="meta"><div class="iname">Bread</div><div class="icap">on the list</div></div>
+              <span class="claimed">Kel is getting it</span>
+            </div>
+            <div class="item">
+              <div class="emoji">☕️</div>
+              <div class="meta"><div class="iname">Coffee</div><div class="icap">on the list</div></div>
+              <div class="act claim">I'll get it</div>
+            </div>
+          </div>
+        </div>
+        <div class="whisper"><span>Got it — house remembers.</span></div>
+        <div class="tabbar">
+          <div class="tab"><span class="ic">🏠</span>Home</div>
+          <div class="tab on"><span class="ic">🧺</span>Kitchen</div>
+          <div class="tab"><span class="ic">✓</span>Tasks</div>
+          <div class="tab"><span class="ic">💶</span>Money</div>
+        </div>
+      </div>
+      <div class="cap">2 · To buy</div>
+      <div class="capn">The buy list, and its verbs — add row + "Start shopping" up top. Claim / "I'll get it" / "Got it ✓" stay exactly as they work now. One action per row; no ✕ crowding the line.</div>
+    </div>
+
+    <!-- 3 · SWIPE + still-here + money bridge -->
+    <div class="col">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="hero">
+          <div class="hchip"><div class="he">🏡</div><div><b>Testflat</b><span>you + Kel</span></div><div class="avatar">S</div></div>
+          <div class="eyebrow">Kitchen</div>
+          <div class="htitle">Pantry's stocked 🌿</div>
+          <div class="statstrip">
+            <div class="stat"><b>0</b><span>To buy</span></div>
+            <div class="stat"><b>8</b><span>In pantry</span></div>
+            <div class="stat"><b>1</b><span>Running low</span></div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="seg">
+            <div>To buy <span class="badge">0</span></div>
+            <div class="on">In pantry <span class="badge">8</span></div>
+          </div>
+
+          <!-- swiped-open row: Remove revealed -->
+          <div class="subhead">Swipe a row to remove</div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div class="swipe">
+              <div class="del"><span style="font-size:17px">✕</span>Remove</div>
+              <div class="front">
+                <div class="item"><div class="emoji">🧴</div><div class="meta"><div class="iname">Olive oil</div><div class="icap">in the cupboard</div></div><div class="act ghost">Ran out</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- still-here prompt on an old item -->
+          <div class="subhead">Still here?</div>
+          <div class="card">
+            <div class="item" style="border-bottom:none;padding-bottom:6px">
+              <div class="emoji">🥫</div><div class="meta"><div class="iname dim">Canned beans</div><div class="icap">been a while</div></div>
+            </div>
+            <div class="still">
+              <div class="t">Still need this?</div>
+              <div class="mini y">Yes</div>
+              <div class="mini o">Ran out</div>
+            </div>
+          </div>
+
+          <!-- money bridge (inline, calm) -->
+          <div class="subhead">Just restocked</div>
+          <div class="bridge">
+            <div class="bt">Add Milk to Money?</div>
+            <div class="br">
+              <div class="bf">€ (optional)</div>
+              <div class="badd">Add</div>
+              <div class="bskip">Skip</div>
+            </div>
+            <div class="bh">Split equally among 2</div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><span class="ic">🏠</span>Home</div>
+          <div class="tab on"><span class="ic">🧺</span>Kitchen</div>
+          <div class="tab"><span class="ic">✓</span>Tasks</div>
+          <div class="tab"><span class="ic">💶</span>Money</div>
+        </div>
+      </div>
+      <div class="cap">3 · Details</div>
+      <div class="capn">Remove hides behind swipe-left (no more mis-tap deletes). The "Still need this?" strip and the Money bridge keep their exact logic — just calmer spacing, and the bridge no longer jumps the whole screen.</div>
+    </div>
+
+  </div>
+</body>
+</html>

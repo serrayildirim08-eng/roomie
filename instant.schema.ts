@@ -83,6 +83,7 @@ const _schema = i.schema({
       status: i.string(), // 'in' | 'out'
       shelfLifeDays: i.number().optional(), // null = unknown → never ages
       barcode: i.string().optional().indexed(), // set when added via Grocery Scan
+      dietTags: i.json().optional(), // string[] of diet flags from the barcode: 'vegan'|'vegetarian'|'gluten-free'|'lactose-free'
       addedAt: i.date().indexed(), // reset on every restock; drives aging
       createdAt: i.date().indexed(),
       updatedAt: i.date().indexed(),
