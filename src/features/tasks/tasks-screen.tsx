@@ -16,6 +16,7 @@ import { id } from '@instantdb/react-native';
 import { useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -316,6 +317,7 @@ export function TasksScreen({ userId }: { userId: string }) {
       area: string;
       cadenceDays?: number;
     } = { name, createdAt: ts, updatedAt: ts, area: inferAreaFromGroup(group) };
+    (fields as Record<string, unknown>).householdId = household.id; // create-rule gate
     if (cadenceDays != null) fields.cadenceDays = cadenceDays;
     try {
       await db.transact(
@@ -344,7 +346,7 @@ export function TasksScreen({ userId }: { userId: string }) {
     try {
       await db.transact(
         db.tx.chores[choreId]
-          .update({ name, createdAt: ts, updatedAt: ts })
+          .update({ name, createdAt: ts, updatedAt: ts, householdId: household.id })
           // The adder takes the first turn — you brought it up, you start.
           .link({ household: household.id, turn: userId }),
       );
@@ -372,7 +374,7 @@ export function TasksScreen({ userId }: { userId: string }) {
     try {
       await db.transact(
         db.tx.personalTasks[taskId]
-          .update({ title, status: 'open', createdAt: nowMs() })
+          .update({ title, status: 'open', createdAt: nowMs(), ownerId: userId })
           .link({ household: household.id, owner: userId }),
       );
       // Personal tasks stay out of the home diary — they're yours.
@@ -402,12 +404,19 @@ export function TasksScreen({ userId }: { userId: string }) {
     const ts = nowMs();
     const next = nextTurn(memberIds, holderId);
     const eventId = id();
-    await db.transact([
-      db.tx.chores[choreId].update({ updatedAt: ts }).link({ turn: next ?? userId }),
-      db.tx.choreEvents[eventId]
-        .update({ type: eventType, at: ts })
-        .link({ chore: choreId, by: userId }),
-    ]);
+    try {
+      await db.transact([
+        db.tx.chores[choreId].update({ updatedAt: ts }).link({ turn: next ?? userId }),
+        db.tx.choreEvents[eventId]
+          .update({ type: eventType, at: ts, householdId: household.id })
+          .link({ chore: choreId, by: userId }),
+      ]);
+    } catch {
+      // Write failed (offline, or a permission reject) — say so softly instead
+      // of a button that silently does nothing.
+      Alert.alert('Could not save', 'That tap didn’t stick — try again in a moment.');
+      return;
+    }
     await logActivity({
       householdId: household.id,
       actorId: userId,

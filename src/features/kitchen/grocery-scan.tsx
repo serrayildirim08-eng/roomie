@@ -242,6 +242,7 @@ export function GroceryScan({
               barcode: line.barcode ?? undefined,
               dietTags: line.dietTags?.length ? line.dietTags : undefined,
               addedAt: ts,
+              householdId,
               createdAt: ts,
               updatedAt: ts,
             })
@@ -251,7 +252,7 @@ export function GroceryScan({
       // Invisible foundation: every grocery is a timestamped purchase event.
       txns.push(
         db.tx.purchases[id()]
-          .update({ itemName: line.normalizedName, at: ts })
+          .update({ itemName: line.normalizedName, at: ts, householdId })
           .link({ household: householdId, by: userId }),
       );
     }
@@ -260,7 +261,7 @@ export function GroceryScan({
     if (cents) {
       txns.push(
         db.tx.expenses[id()]
-          .update({ title, amountCents: cents, currency: 'EUR', createdAt: ts })
+          .update({ title, amountCents: cents, currency: 'EUR', householdId, createdAt: ts })
           .link({ household: householdId, paidBy: payerId, participants: shareIds }),
       );
     }

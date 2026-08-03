@@ -53,6 +53,7 @@ export async function logActivity(params: {
       .update({
         type: params.type,
         metadata: { actorName: params.actorName, ...(params.metadata ?? {}) },
+        householdId: params.householdId, // create rule reads this, not the link
         createdAt: Date.now(),
       })
       .link({ household: params.householdId, actor: params.actorId }),

@@ -55,6 +55,10 @@ const _schema = i.schema({
     // The home diary — the connective tissue across modules.
     activityEvents: i.entity({
       type: i.string(), // e.g. 'expense_added', 'chore_done', 'pantry_added'
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       metadata: i.json().optional(),
       createdAt: i.date().indexed(),
     }),
@@ -64,6 +68,10 @@ const _schema = i.schema({
       title: i.string(),
       amountCents: i.number(), // store money in cents to avoid float errors
       currency: i.string(), // 'EUR'
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       createdAt: i.date().indexed(),
     }),
 
@@ -71,6 +79,12 @@ const _schema = i.schema({
     settlements: i.entity({
       amountCents: i.number(),
       currency: i.string(),
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
+      // Denormalized payer auth id — same reason; create checks auth.id == this.
+      fromUserId: i.string().optional().indexed(),
       createdAt: i.date().indexed(),
     }),
 
@@ -81,6 +95,10 @@ const _schema = i.schema({
       normalizedName: i.string().indexed(),
       category: i.string(), // GroceryCategory
       status: i.string(), // 'in' | 'out'
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       shelfLifeDays: i.number().optional(), // null = unknown → never ages
       barcode: i.string().optional().indexed(), // set when added via Grocery Scan
       dietTags: i.json().optional(), // string[] of diet flags from the barcode: 'vegan'|'vegetarian'|'gluten-free'|'lactose-free'
@@ -93,6 +111,10 @@ const _schema = i.schema({
     // feeds the cadence/"running low" predictions later.
     purchases: i.entity({
       itemName: i.string().indexed(), // normalized name
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       at: i.date().indexed(),
     }),
 
@@ -103,6 +125,10 @@ const _schema = i.schema({
       area: i.string().optional(), // 'kitchen'|'bathroom'|'living'|'trash'|'admin'|'supplies'|'other'
       effort: i.string().optional(), // 'tiny'|'normal'|'big'
       doneNote: i.string().optional(), // optional "what counts as done"
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       cadenceDays: i.number().optional(), // optional soft cadence; unset = no due signal
       snoozedUntil: i.date().optional(), // ms timestamp; soft "resting until"
       createdAt: i.date().indexed(),
@@ -113,6 +139,10 @@ const _schema = i.schema({
     // History only, never counts — the no-shame rule.
     choreEvents: i.entity({
       type: i.string(), // 'done' | 'pass'
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       at: i.date().indexed(),
     }),
 
@@ -121,6 +151,8 @@ const _schema = i.schema({
     personalTasks: i.entity({
       title: i.string(),
       status: i.string(), // 'open' | 'done'
+      // Denormalized owner auth id — same reason; create checks auth.id == this.
+      ownerId: i.string().optional().indexed(),
       createdAt: i.date().indexed(),
     }),
   },

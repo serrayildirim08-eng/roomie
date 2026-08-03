@@ -297,6 +297,7 @@ export function KitchenScreen({ userId }: { userId: string }) {
               status: 'in',
               shelfLifeDays: resolved.shelfLifeDays ?? undefined,
               addedAt: now,
+              householdId: household.id,
               createdAt: now,
               updatedAt: now,
             })
@@ -352,7 +353,7 @@ export function KitchenScreen({ userId }: { userId: string }) {
         .unlink({ claimedBy: userId }),
       // Invisible foundation: every restock is a timestamped purchase event.
       db.tx.purchases[purchaseId]
-        .update({ itemName: normalizedName, at: ts })
+        .update({ itemName: normalizedName, at: ts, householdId: household.id })
         .link({ household: household.id, by: userId }),
     ]);
     await logActivity({

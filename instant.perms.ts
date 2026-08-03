@@ -23,7 +23,13 @@ import type { InstantRules } from '@instantdb/react-native';
 
 // Reusable expressions (InstantDB `bind`): name, expression, name, expression…
 const memberOfHousehold = "auth.id in data.ref('household.memberships.user.id')";
-const creatorOfHousehold = "auth.id in data.ref('household.creator.id')";
+// CREATE rules can't traverse links born in the same transaction (see the
+// memberships.userId note in the schema — this bit us live: every create that
+// checked `memberOfHousehold` was silently rejected once perms were pushed).
+// So creation is gated on the row's denormalized householdId, checked from the
+// AUTH side, whose memberships already exist at rule-eval time.
+const createsInOwnHousehold =
+  "data.householdId != null && data.householdId in auth.ref('$user.memberships.household.id')";
 // Money rows must carry a sane amount: positive, at most €10,000.00 in cents.
 const validAmount = 'data.amountCents > 0 && data.amountCents <= 1000000';
 
@@ -109,7 +115,7 @@ const rules = {
   activityEvents: {
     allow: {
       view: memberOfHousehold,
-      create: memberOfHousehold,
+      create: createsInOwnHousehold,
       update: 'false',
       delete: 'false',
     },
@@ -119,7 +125,7 @@ const rules = {
   expenses: {
     allow: {
       view: memberOfHousehold,
-      create: `${memberOfHousehold} && ${validAmount}`,
+      create: `${createsInOwnHousehold} && ${validAmount}`,
       update: memberOfHousehold,
       delete: memberOfHousehold,
     },
@@ -130,7 +136,7 @@ const rules = {
   settlements: {
     allow: {
       view: memberOfHousehold,
-      create: `auth.id in data.ref('fromUser.id') && ${validAmount}`,
+      create: `auth.id != null && auth.id == data.fromUserId && ${createsInOwnHousehold} && ${validAmount}`,
       update: 'false',
       delete: "auth.id in data.ref('fromUser.id')",
     },
@@ -140,7 +146,7 @@ const rules = {
   pantryItems: {
     allow: {
       view: memberOfHousehold,
-      create: memberOfHousehold,
+      create: createsInOwnHousehold,
       update: memberOfHousehold,
       delete: memberOfHousehold,
     },
@@ -149,18 +155,18 @@ const rules = {
   purchases: {
     allow: {
       view: memberOfHousehold,
-      create: memberOfHousehold,
+      create: createsInOwnHousehold,
       update: 'false',
       delete: 'false',
     },
   },
 
-  // Tasks. Chores are seeded in the SAME transaction that creates the home's
-  // owner membership, so create also accepts the household creator.
+  // Tasks. Seed chores are committed in their own transaction AFTER the owner
+  // membership exists (see household.tsx), so createsInOwnHousehold holds.
   chores: {
     allow: {
       view: memberOfHousehold,
-      create: `${memberOfHousehold} || ${creatorOfHousehold}`,
+      create: createsInOwnHousehold,
       update: memberOfHousehold,
       delete: memberOfHousehold,
     },
@@ -169,7 +175,7 @@ const rules = {
   choreEvents: {
     allow: {
       view: "auth.id in data.ref('chore.household.memberships.user.id')",
-      create: "auth.id in data.ref('chore.household.memberships.user.id')",
+      create: createsInOwnHousehold,
       update: 'false',
       delete: 'false',
     },
@@ -180,7 +186,7 @@ const rules = {
   personalTasks: {
     allow: {
       view: 'isOwner',
-      create: 'isOwner',
+      create: 'auth.id != null && auth.id == data.ownerId',
       update: 'isOwner',
       delete: 'isOwner',
     },

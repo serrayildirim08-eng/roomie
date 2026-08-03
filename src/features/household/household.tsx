@@ -211,7 +211,7 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
       await db.transact(
         STARTER_PACKS[homeType].map((name, idx) =>
           db.tx.chores[id()]
-            .update({ name, createdAt: now + idx, updatedAt: now + idx })
+            .update({ name, householdId, createdAt: now + idx, updatedAt: now + idx })
             .link({ household: householdId, turn: userId }),
         ),
       );

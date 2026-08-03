@@ -246,7 +246,13 @@ export function MoneyScreen({ userId }: { userId: string }) {
               const settlementId = id();
               await db.transact(
                 db.tx.settlements[settlementId]
-                  .update({ amountCents, currency: 'EUR', createdAt: nowMs() })
+                  .update({
+                    amountCents,
+                    currency: 'EUR',
+                    householdId: household.id,
+                    fromUserId: userId, // create rule: only the payer may record
+                    createdAt: nowMs(),
+                  })
                   .link({ household: household.id, fromUser: userId, toUser: toId }),
               );
               await logActivity({
