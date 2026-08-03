@@ -17,6 +17,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -172,6 +173,12 @@ export function KitchenScreen({ userId }: { userId: string }) {
   const [tab, setTab] = useState<'toBuy' | 'inPantry'>('inPantry');
   // Optional, calm diet filter over the pantry list. Default: show everything.
   const [dietFilter, setDietFilter] = useState<DietTag | null>(null);
+  // Long-press a pantry row → move it to the right shelf. The fix is durable:
+  // items are deduped by normalizedName and revived (never re-created), so a
+  // corrected category sticks for good.
+  const [moveTarget, setMoveTarget] = useState<{ id: string; name: string; category: string } | null>(
+    null,
+  );
   // Money bridge: when set, we just restocked this item and offer "Add to Money?"
   const [bridge, setBridge] = useState<{ itemName: string } | null>(null);
   const [bridgeAmount, setBridgeAmount] = useState('');
@@ -611,7 +618,13 @@ export function KitchenScreen({ userId }: { userId: string }) {
                           const pillText = age === 'faded' ? 'getting low' : 'use soon';
                           return (
                             <SwipeRow key={it.id} onRemove={() => onDelete(it.id, it.name)}>
-                              <View style={[styles.rowWrap, idx > 0 && styles.rowDivided]}>
+                              <Pressable
+                                onLongPress={() =>
+                                  setMoveTarget({ id: it.id, name: it.name, category: it.category })
+                                }
+                                delayLongPress={350}
+                                style={[styles.rowWrap, idx > 0 && styles.rowDivided]}
+                              >
                                 <View style={styles.row}>
                                   <View style={styles.emojiChip}>
                                     <Text style={styles.emojiChipText}>
@@ -670,7 +683,7 @@ export function KitchenScreen({ userId }: { userId: string }) {
                                     </Pressable>
                                   </View>
                                 ) : null}
-                              </View>
+                              </Pressable>
                             </SwipeRow>
                           );
                         })}
@@ -683,6 +696,48 @@ export function KitchenScreen({ userId }: { userId: string }) {
           )}
         </View>
       </ScrollView>
+
+      {moveTarget ? (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMoveTarget(null)}
+        >
+          <Pressable style={styles.moveBackdrop} onPress={() => setMoveTarget(null)}>
+            <Pressable style={styles.moveSheet} onPress={() => {}}>
+              <Text style={styles.moveTitle}>Where does “{moveTarget.name}” live?</Text>
+              <View style={styles.moveGrid}>
+                {GROUP_ORDER.map((cat) => {
+                  const current = catOf(moveTarget.category) === cat;
+                  return (
+                    <Pressable
+                      key={cat}
+                      style={[styles.moveChip, current && styles.moveChipOn]}
+                      onPress={() => {
+                        if (!current) {
+                          void db.transact(
+                            db.tx.pantryItems[moveTarget.id].update({
+                              category: cat,
+                              updatedAt: nowMs(),
+                            }),
+                          );
+                        }
+                        setMoveTarget(null);
+                      }}
+                    >
+                      <Text style={styles.moveChipEmoji}>{CATEGORY_EMOJI[cat]}</Text>
+                      <Text style={[styles.moveChipLabel, current && styles.moveChipLabelOn]}>
+                        {CATEGORY_LABEL[cat]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      ) : null}
 
       {whisper ? (
         <Animated.View
@@ -909,6 +964,38 @@ const styles = StyleSheet.create({
   swipeRemoveX: { color: '#fff', fontSize: 16 },
   swipeRemoveLabel: { color: '#fff', fontSize: 12, fontFamily: RoomieFonts.bodyBold },
 
+  moveBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20, 30, 24, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  moveSheet: {
+    backgroundColor: Roomie.card,
+    borderTopLeftRadius: Radius.card,
+    borderTopRightRadius: Radius.card,
+    padding: 20,
+    paddingBottom: 34,
+  },
+  moveTitle: {
+    fontSize: 15,
+    fontFamily: RoomieFonts.bodySemi,
+    color: Roomie.ink,
+    marginBottom: 14,
+  },
+  moveGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  moveChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: Roomie.canvas,
+  },
+  moveChipOn: { backgroundColor: Roomie.sageSoft },
+  moveChipEmoji: { fontSize: 14 },
+  moveChipLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  moveChipLabelOn: { color: Roomie.sage },
   whisper: { position: 'absolute', left: 0, right: 0, bottom: 100, alignItems: 'center' },
   whisperText: {
     backgroundColor: Roomie.sageSoft,
