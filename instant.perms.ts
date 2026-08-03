@@ -181,6 +181,17 @@ const rules = {
     },
   },
 
+  // Bill templates — same trust level as expenses; the stamped expense rows
+  // are what the ledger actually reads.
+  bills: {
+    allow: {
+      view: memberOfHousehold,
+      create: `${createsInOwnHousehold} && ${validAmount}`,
+      update: memberOfHousehold,
+      delete: memberOfHousehold,
+    },
+  },
+
   // Personal heads-ups — only the recipient can read or dismiss; any
   // housemate may create one (that's the point: "I got it, no need").
   nudges: {

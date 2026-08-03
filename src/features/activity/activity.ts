@@ -21,6 +21,8 @@ export type ActivityType =
   | 'pantry_claimed'
   | 'pantry_got'
   | 'pantry_removed'
+  | 'bill_added'
+  | 'bill_paid'
   | 'chore_added'
   | 'chore_done'
   | 'chore_passed'
@@ -75,6 +77,13 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
       return { icon: '👋', text: `${who} joined` };
     case 'member_left':
       return { icon: '🕊️', text: `${who} moved out` };
+    case 'bill_added':
+      return { icon: '📄', text: `${who} set up ${metaString(metadata, 'title') ?? 'a bill'}` };
+    case 'bill_paid':
+      return {
+        icon: '📄',
+        text: `${who} paid ${metaString(metadata, 'title') ?? 'a bill'} ${eur(metadata)}`.trim(),
+      };
     case 'expense_added': {
       const title = metaString(metadata, 'title');
       return {

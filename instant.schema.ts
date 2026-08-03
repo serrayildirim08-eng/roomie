@@ -146,6 +146,20 @@ const _schema = i.schema({
       at: i.date().indexed(),
     }),
 
+    // Money — a monthly template (rent, internet, Spotify). "Paid" stamps an
+    // ORDINARY expense (paidBy + participants copied from here), so split and
+    // balances ride the existing fairness math — no parallel ledger.
+    bills: i.entity({
+      name: i.string(),
+      amountCents: i.number(),
+      currency: i.string(), // 'EUR'
+      dueDay: i.number(), // 1–31, day of month
+      lastPaidPeriod: i.string().optional(), // 'YYYY-MM' — blocks double-stamp
+      householdId: i.string().optional().indexed(), // create-rule gate
+      createdAt: i.date().indexed(),
+      updatedAt: i.date().indexed(),
+    }),
+
     // A quiet, personal heads-up ("Serra already got the milk — no need").
     // One recipient, dismissible. NOT the public diary — that's activityEvents.
     nudges: i.entity({
@@ -221,6 +235,18 @@ const _schema = i.schema({
     },
 
     // Kitchen links.
+    billHousehold: {
+      forward: { on: 'bills', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'bills' },
+    },
+    billPaidBy: {
+      forward: { on: 'bills', has: 'one', label: 'paidBy' },
+      reverse: { on: '$users', has: 'many', label: 'billsPaid' },
+    },
+    billParticipants: {
+      forward: { on: 'bills', has: 'many', label: 'participants' },
+      reverse: { on: '$users', has: 'many', label: 'billShares' },
+    },
     nudgeHousehold: {
       forward: { on: 'nudges', has: 'one', label: 'household' },
       reverse: { on: 'households', has: 'many', label: 'nudges' },

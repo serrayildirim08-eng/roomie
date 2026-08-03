@@ -424,6 +424,7 @@ export function KitchenScreen({ userId }: { userId: string }) {
           title: bridge.itemName,
           amountCents: cents,
           currency: 'EUR',
+          householdId: household.id, // create-rule gate (AGENTS.md)
           createdAt: nowMs(),
         })
         .link({
