@@ -182,6 +182,16 @@ const _schema = i.schema({
       createdAt: i.date().indexed(),
     }),
 
+    // Calendar — a single all-day happening ("guests", "landlord visit").
+    // Bills are NOT events: due dots derive from bills.dueDay every month.
+    events: i.entity({
+      name: i.string(),
+      date: i.string().indexed(), // 'YYYY-MM-DD' — all-day, no clock in v1
+      note: i.string().optional(),
+      householdId: i.string().optional().indexed(), // create-rule gate
+      createdAt: i.date().indexed(),
+    }),
+
     // A quiet, personal heads-up ("Serra already got the milk — no need").
     // One recipient, dismissible. NOT the public diary — that's activityEvents.
     nudges: i.entity({
@@ -276,6 +286,10 @@ const _schema = i.schema({
     receiptExpense: {
       forward: { on: 'receipts', has: 'one', label: 'expense' },
       reverse: { on: 'expenses', has: 'many', label: 'receipts' },
+    },
+    eventHousehold: {
+      forward: { on: 'events', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'events' },
     },
     nudgeHousehold: {
       forward: { on: 'nudges', has: 'one', label: 'household' },

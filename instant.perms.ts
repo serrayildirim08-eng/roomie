@@ -209,6 +209,16 @@ const rules = {
     },
   },
 
+  // Calendar events — house-shared, any member may add or remove.
+  events: {
+    allow: {
+      view: memberOfHousehold,
+      create: createsInOwnHousehold,
+      update: memberOfHousehold,
+      delete: memberOfHousehold,
+    },
+  },
+
   // Receipt photos — same trust as the diary; append-only, no edits.
   receipts: {
     allow: {
