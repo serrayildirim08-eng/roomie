@@ -219,12 +219,13 @@ const rules = {
     },
   },
 
-  // Receipt photos — same trust as the diary; append-only, no edits.
+  // Receipt photos — the PHOTO is immutable ($files has no delete), but the
+  // row takes member edits: itemize attaches the stamped expense post-create.
   receipts: {
     allow: {
       view: memberOfHousehold,
       create: createsInOwnHousehold,
-      update: 'false',
+      update: memberOfHousehold,
       delete: memberOfHousehold,
     },
   },

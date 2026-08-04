@@ -655,6 +655,9 @@ export function MoneyScreen({ userId }: { userId: string }) {
         visible={receiptsOpen}
         onClose={() => setReceiptsOpen(false)}
         recentExpenses={recentExpenses.slice(0, 3).map((e) => ({ id: e.id, title: e.title }))}
+        userId={userId}
+        myName={myName}
+        memberIds={members.map((m) => m.userId)}
       />
 
       {billSheet ? (
