@@ -10,7 +10,7 @@
     "ios": {
       "bundleIdentifier": "com.serrayildirim.roomie",
       "icon": "./assets/images/roomie-icon.png",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "config": {
         "usesNonExemptEncryption": false
       }
