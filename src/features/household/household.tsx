@@ -33,12 +33,25 @@ import { db } from '@/lib/db';
 import { logActivity } from '@/features/activity/activity';
 import { ActivityFeed } from '@/features/activity/activity-feed';
 import { BrainInput } from '@/features/brain/brain-input';
+import { HomePulse } from '@/features/home/home-pulse';
+import { TinyWins } from '@/features/home/tiny-wins';
+import { WeeklyRecap } from '@/features/home/weekly-recap';
+import { AccountActions } from '@/features/account/account';
 
-import { STARTER_CHORES } from '@/features/tasks/starter';
+import { STARTER_PACKS, type HomeType } from '@/features/tasks/starter';
+
+import { generateInviteCode, INVITE_CODE_SHAPE, normalizeInviteCode } from './invite-code';
 
 type Roommate = { name: string; seed: string };
 
-const INVITE_CODE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Home-type chips for CreateHousehold — first one is the default and seeds the
+// original five chores, so existing behavior is unchanged unless you pick.
+const HOME_TYPES: { key: HomeType; label: string }[] = [
+  { key: 'apartment', label: '2-roommate apartment' },
+  { key: 'student', label: 'Student flat' },
+  { key: 'couple', label: 'Couple' },
+  { key: 'house', label: '3+ roommate house' },
+];
 
 export function HouseholdGate({
   userId,
@@ -65,6 +78,18 @@ export function HouseholdGate({
     if (myMembership.displayName === userName) return;
     void db.transact(db.tx.memberships[myMembership.id].update({ displayName: userName }));
   }, [myMembership, userName]);
+
+  // Backfill: homes created before short invite codes existed have none. Mint
+  // one on first view so every home has a shareable code. households.update is
+  // creator-only now, so only the creator's device performs the backfill.
+  const householdForCode = myMembership?.household;
+  useEffect(() => {
+    if (!householdForCode || householdForCode.inviteCode) return;
+    if (householdForCode.creatorId !== userId) return;
+    void db.transact(
+      db.tx.households[householdForCode.id].update({ inviteCode: generateInviteCode() }),
+    );
+  }, [householdForCode?.id, householdForCode?.inviteCode, householdForCode?.creatorId, userId]);
 
   if (isLoading) {
     return (
@@ -99,7 +124,8 @@ export function HouseholdGate({
     <HouseholdHome
       name={household.name}
       role={membership.role}
-      code={household.id}
+      householdId={household.id}
+      code={household.inviteCode ?? ''}
       membershipId={membership.id}
       userId={userId}
       userName={userName}
@@ -143,6 +169,7 @@ function NoHousehold({
 
 function CreateHousehold({ userId, userName }: { userId: string; userName: string }) {
   const [name, setName] = useState('');
+  const [homeType, setHomeType] = useState<HomeType>('apartment');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -152,30 +179,42 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
       setError('Give your home a name.');
       return;
     }
-    if (INVITE_CODE_SHAPE.test(trimmed)) {
-      setError('That looks like an invite code — tap “Have a code? Join a home” below.');
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
       const householdId = id();
       const membershipId = id();
+      const inviteCode = generateInviteCode();
       const now = Date.now();
-      await db.transact([
+      // Create the home FIRST and let it commit: the invite-gated
+      // memberships.create rule reads the household's inviteCode / creator via
+      // data.ref, which can't resolve while the household is born in the same
+      // transaction. Same reason chores commit after the membership below.
+      await db.transact(
         db.tx.households[householdId]
-          .update({ name: trimmed, createdAt: now })
+          .update({ name: trimmed, creatorId: userId, inviteCode, createdAt: now })
           .link({ creator: userId }),
+      );
+      await db.transact(
         db.tx.memberships[membershipId]
-          .update({ role: 'owner', status: 'active', displayName: userName, joinedAt: now })
+          .ruleParams({ code: inviteCode })
+          .update({
+            role: 'owner',
+            status: 'active',
+            userId,
+            displayName: userName,
+            joinedAt: now,
+          })
           .link({ household: householdId, user: userId }),
-        // Seed the starter chores quietly (no diary spam).
-        ...STARTER_CHORES.map((name, idx) =>
+      );
+      // Now that the membership exists, seed the chosen pack's chores quietly.
+      await db.transact(
+        STARTER_PACKS[homeType].map((name, idx) =>
           db.tx.chores[id()]
-            .update({ name, createdAt: now + idx, updatedAt: now + idx })
+            .update({ name, householdId, createdAt: now + idx, updatedAt: now + idx })
             .link({ household: householdId, turn: userId }),
         ),
-      ]);
+      );
       await logActivity({
         householdId,
         actorId: userId,
@@ -201,6 +240,21 @@ function CreateHousehold({ userId, userName }: { userId: string; userName: strin
         onChangeText={setName}
         autoFocus
       />
+      <Text style={styles.chipHint}>What kind of home? Sets your starting chores.</Text>
+      <View style={styles.chipRow}>
+        {HOME_TYPES.map((t) => {
+          const on = t.key === homeType;
+          return (
+            <Pressable
+              key={t.key}
+              onPress={() => setHomeType(t.key)}
+              style={[styles.chip, on && styles.chipOn]}
+            >
+              <Text style={[styles.chipLabel, on && styles.chipLabelOn]}>{t.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PrimaryButton label="Create home" onPress={onCreate} busy={busy} />
     </View>
@@ -213,49 +267,51 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
   const [error, setError] = useState<string | null>(null);
 
   const onJoin = async () => {
-    const trimmed = code.trim();
-    if (!trimmed) {
+    const entered = normalizeInviteCode(code);
+    if (!entered) {
       setError('Paste the invite code.');
       return;
     }
-    if (!INVITE_CODE_SHAPE.test(trimmed)) {
+    if (!INVITE_CODE_SHAPE.test(entered)) {
       setError('That doesn’t look like an invite code.');
       return;
     }
     setBusy(true);
     setError(null);
-    // Server perms hide a home from non-members (households.view = isMember), so
-    // we CANNOT read it before joining — a preflight query would always come
-    // back empty and the join would deadlock. Instead: join first, then confirm
-    // the home is real, and roll the membership back if the code was bogus.
-    const membershipId = id();
     try {
-      await db.transact(
-        db.tx.memberships[membershipId]
-          .update({ role: 'member', status: 'active', displayName: userName, joinedAt: Date.now() })
-          .link({ household: trimmed, user: userId }),
+      // ruleParams lets a non-member see exactly the one home whose code this
+      // is (the households.view rule). So we can look it up FIRST, then join —
+      // no blind join + rollback dance.
+      const { data } = await db.queryOnce(
+        { households: { $: { where: { inviteCode: entered } } } },
+        { ruleParams: { code: entered } },
       );
-      const { data } = await db.queryOnce({
-        households: { $: { where: { id: trimmed } } },
-      });
-      if (!data.households[0]) {
-        await db.transact(db.tx.memberships[membershipId].delete());
+      const home = data.households[0];
+      if (!home) {
         setError('No home found for that code.');
         return;
       }
+      // memberships.create is invite-gated: the rule checks this ruleParam
+      // against the household's stored inviteCode.
+      await db.transact(
+        db.tx.memberships[id()]
+          .ruleParams({ code: entered })
+          .update({
+            role: 'member',
+            status: 'active',
+            userId,
+            displayName: userName,
+            joinedAt: Date.now(),
+          })
+          .link({ household: home.id, user: userId }),
+      );
       await logActivity({
-        householdId: trimmed,
+        householdId: home.id,
         actorId: userId,
         actorName: userName,
         type: 'member_joined',
       });
     } catch {
-      // Best-effort rollback so a failed join leaves no orphan membership.
-      try {
-        await db.transact(db.tx.memberships[membershipId].delete());
-      } catch {
-        // ignore — nothing better we can do here
-      }
       setError('Could not join. Check the code and try again.');
     } finally {
       setBusy(false);
@@ -285,6 +341,7 @@ function JoinHousehold({ userId, userName }: { userId: string; userName: string 
 function HouseholdHome({
   name,
   role,
+  householdId,
   code,
   membershipId,
   userId,
@@ -294,6 +351,7 @@ function HouseholdHome({
 }: {
   name: string;
   role: string;
+  householdId: string;
   code: string;
   membershipId: string;
   userId: string;
@@ -322,7 +380,7 @@ function HouseholdHome({
               // Log BEFORE deleting the row — once it's gone we're no longer a
               // member and the activity write would be denied by perms.
               await logActivity({
-                householdId: code,
+                householdId,
                 actorId: userId,
                 actorName: userName,
                 type: 'member_left',
@@ -359,9 +417,15 @@ function HouseholdHome({
         </Hero>
 
         <View style={styles.homeBody}>
-          <BrainInput householdId={code} userId={userId} userName={userName} />
+          <BrainInput householdId={householdId} userId={userId} userName={userName} />
 
-          <Card pad>
+          <HomePulse householdId={householdId} userId={userId} />
+
+          <TinyWins householdId={householdId} userId={userId} />
+
+          <WeeklyRecap householdId={householdId} />
+
+          <Card pad style={styles.inviteCard}>
             <Text style={styles.inviteLabel}>Invite code — share with your roommates</Text>
             <Text style={styles.inviteCode} selectable>
               {code}
@@ -377,7 +441,7 @@ function HouseholdHome({
           <View style={styles.section}>
             <SectionHead title="House activity" right={<Count>recent</Count>} />
             <Card>
-              <ActivityFeed householdId={code} />
+              <ActivityFeed householdId={householdId} />
             </Card>
           </View>
 
@@ -389,6 +453,8 @@ function HouseholdHome({
               <Text style={styles.signoutLabel}>Sign out</Text>
             </Pressable>
           </View>
+
+          <AccountActions userId={userId} userName={userName} />
         </View>
       </ScrollView>
     </View>
@@ -465,8 +531,17 @@ const styles = StyleSheet.create({
     borderColor: Roomie.hairline,
     gap: 6,
   },
-  inviteLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
-  inviteCode: { fontSize: 13, color: Roomie.ink, fontFamily: RoomieFonts.bodyBold },
+  inviteCard: { alignItems: 'center' },
+  inviteLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub, textAlign: 'center' },
+  inviteCode: {
+    fontSize: 32,
+    color: Roomie.forestInk,
+    fontFamily: RoomieFonts.displayBold,
+    textAlign: 'center',
+    letterSpacing: 4,
+    marginTop: 4,
+    marginBottom: 4,
+  },
   copyButton: {
     marginTop: 8,
     alignSelf: 'flex-start',
@@ -476,6 +551,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   copyLabel: { color: Roomie.canvas, fontSize: 14, fontFamily: RoomieFonts.bodyBold },
+  chipHint: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.sub, marginTop: 2 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
+  chip: {
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  chipOn: { backgroundColor: Roomie.forest, borderColor: Roomie.forest },
+  chipLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  chipLabelOn: { color: '#fff' },
   leave: { alignSelf: 'flex-start', paddingVertical: 8 },
   leaveLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
   signoutLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.danger },
@@ -486,7 +574,7 @@ const styles = StyleSheet.create({
   homeScroll: { paddingBottom: 120 }, // clears the native tab bar (was hidden)
   homeBody: { padding: 18, gap: 16 },
   section: { gap: 11 },
-  copyChunky: { marginTop: 12, alignSelf: 'flex-start', minWidth: 150 },
+  copyChunky: { marginTop: 12, alignSelf: 'center', minWidth: 150 },
   homeFooter: { flexDirection: 'row', gap: 18, marginTop: 4 },
 
   // No-household (create / join) screen.

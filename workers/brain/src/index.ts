@@ -10,21 +10,28 @@ import { verifyClerkJwt } from './clerk-verify';
 import { cloudflareJson, type CfAiBinding } from './cloudflare-ai';
 import { groqChat, type GroqHttpError } from './groq';
 import { SYSTEM_PROMPT, userPrompt } from './prompt';
+import { overDailyCap, type CounterStore } from './rate-limit';
+import { itemizeReceipt } from './receipt';
 import { parseDraft, type Draft } from './schema';
 
 interface Env {
   AI: CfAiBinding;
   GROQ_API_KEY?: string;
   CLERK_ISSUER?: string;
+  // Per-user daily counter (KV). When bound, the cap is per-person and survives
+  // cold starts; when absent (local/pre-deploy) we fall back to the crude
+  // in-memory global guard below so a leaked token still can't run up a bill.
+  RATE_LIMIT?: CounterStore;
 }
 
-// ~200 notes/day is far beyond one flat's dogfood; the cap exists so a leaked
-// token can't run up a bill overnight. Per-isolate (resets on redeploy/idle).
+// Fallback bill-guard for when RATE_LIMIT KV isn't bound yet: a single
+// per-isolate counter (global, resets on redeploy/idle). Superseded by the
+// per-user KV cap as soon as the namespace is provisioned.
 const DAILY_CAP = 200;
 let capDay = '';
 let capCount = 0;
 
-function overCap(): boolean {
+function overCapInMemory(): boolean {
   const today = new Date().toISOString().slice(0, 10);
   if (today !== capDay) {
     capDay = today;
@@ -97,7 +104,8 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
     if (url.pathname === '/health') return json({ ok: true });
-    if (url.pathname !== '/draft' || request.method !== 'POST') {
+    const route = url.pathname;
+    if ((route !== '/draft' && route !== '/receipt-itemize') || request.method !== 'POST') {
       return json({ error: 'not found' }, 404);
     }
 
@@ -107,7 +115,27 @@ export default {
     const userId = await verifyClerkJwt(token, env);
     if (!userId) return json({ error: 'unauthorized' }, 401);
 
-    if (overCap()) return json({ error: 'daily cap reached' }, 429);
+    // Per-user cap when KV is bound; crude global guard otherwise.
+    const over = env.RATE_LIMIT
+      ? await overDailyCap(env.RATE_LIMIT, userId, new Date())
+      : overCapInMemory();
+    if (over) return json({ error: 'daily cap reached' }, 429);
+
+    if (route === '/receipt-itemize') {
+      if (!env.GROQ_API_KEY) return json({ error: 'vision unavailable' }, 503);
+      let imageUrl = '';
+      try {
+        const body = (await request.json()) as { imageUrl?: unknown };
+        imageUrl = typeof body.imageUrl === 'string' ? body.imageUrl : '';
+      } catch {
+        /* falls through to the check below */
+      }
+      // Only Instant storage URLs — this endpoint is not a general vision proxy.
+      if (!imageUrl.startsWith('https://')) return json({ error: 'imageUrl required' }, 400);
+      const read = await itemizeReceipt(env.GROQ_API_KEY, imageUrl);
+      if (!read) return json({ error: 'could not read the receipt' }, 502);
+      return json(read);
+    }
 
     let text = '';
     try {

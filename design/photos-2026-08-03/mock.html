@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roomie — Photo layer mock (Faz 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --canvas:#F4F1EA; --card:#FFFFFF; --ink:#16201B; --sub:#566159; --ink3:#8A958F;
+    --hair:#E8E3D9; --forest:#1A6B43; --forest2:#268A57; --forestInk:#0F3D27; --sageSoft:#E6F4EC;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E2D6;font-family:'Nunito',sans-serif;color:var(--ink);
+    padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:6px}
+  h1{font-family:'Baloo 2';font-weight:800;color:var(--forestInk);font-size:26px}
+  .sub{color:var(--sub);font-size:14px;margin-bottom:26px;max-width:680px;text-align:center;line-height:1.5}
+  .row{display:flex;gap:34px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .cap{font-family:'Baloo 2';font-weight:700;color:var(--forestInk);font-size:15px}
+  .capn{color:var(--ink3);font-size:12px;max-width:330px;text-align:center;line-height:1.5}
+  .phone{width:390px;min-height:720px;background:var(--canvas);border-radius:46px;
+    box-shadow:0 0 0 12px #1c1c1e,0 22px 54px rgba(0,0,0,.30);overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:132px;height:32px;background:#1c1c1e;border-radius:19px;z-index:9}
+  .hero{background:linear-gradient(160deg,var(--forestInk),var(--forest) 62%,var(--forest2));
+    padding:64px 22px 20px;border-radius:0 0 30px 30px;color:#fff}
+  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.72;font-weight:700}
+  .htitle{font-family:'Baloo 2';font-weight:800;font-size:24px;margin-top:6px}
+  .body{padding:18px 16px 60px;display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--card);border-radius:24px;box-shadow:0 1px 2px rgba(22,32,27,.06);padding:16px}
+  .shead{font-family:'Baloo 2';font-weight:700;color:var(--forestInk);font-size:15px}
+  .chore{font-weight:800;font-size:16px}
+  .csub{color:var(--sub);font-size:12.5px;margin-top:3px}
+  .attach{margin-top:12px;display:flex;gap:10px;align-items:center}
+  .photoThumb{width:84px;height:84px;border-radius:16px;background:
+    linear-gradient(135deg,#cfd8cf,#9fb4a3 55%,#e8e3d9);display:grid;place-items:center;font-size:26px}
+  .addPhoto{width:84px;height:84px;border-radius:16px;border:2px dashed var(--hair);
+    display:grid;place-items:center;color:var(--ink3);font-size:12px;font-weight:800;text-align:center;line-height:1.3}
+  .noteBox{margin-top:10px;background:var(--canvas);border-radius:14px;padding:11px 14px;color:var(--sub);font-size:13.5px}
+  .doneBtn{margin-top:12px;background:var(--forest);color:#fff;border-radius:999px;
+    padding:11px 20px;font-weight:800;font-size:14px;display:inline-block}
+  .feedRow{display:flex;gap:12px;align-items:flex-start;padding:13px 2px}
+  .feedRow + .feedRow{border-top:1px solid var(--hair)}
+  .fico{font-size:17px}
+  .ftext{flex:1;font-size:14px;line-height:1.45}
+  .ftext b{font-weight:800}
+  .ftime{color:var(--ink3);font-size:11.5px}
+  .fthumb{width:52px;height:52px;border-radius:12px;background:
+    linear-gradient(135deg,#cfd8cf,#9fb4a3 55%,#e8e3d9);display:grid;place-items:center;font-size:19px}
+  .fnote{color:var(--sub);font-size:12.5px;margin-top:3px;font-style:italic}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .gcell{aspect-ratio:3/4;border-radius:14px;background:linear-gradient(160deg,#f2efe6,#dcd6c6);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;color:var(--sub);font-weight:700}
+  .gcell span{font-size:22px}
+  .month{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:800;margin-top:6px}
+  .ocr{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .oitem{display:flex;align-items:center;gap:10px;background:var(--canvas);border-radius:14px;padding:11px 14px}
+  .ock{width:22px;height:22px;border-radius:8px;background:var(--forest);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
+  .ockOff{background:var(--card);border:2px solid var(--hair);color:transparent}
+  .oname{flex:1;font-weight:800;font-size:14px}
+  .oprice{font-family:'Baloo 2';color:var(--forestInk);font-weight:700;font-size:14px}
+  .cta{margin-top:10px;background:var(--forest);color:#fff;border-radius:16px;padding:14px;text-align:center;font-weight:800;font-size:14.5px}
+  .note{font-size:12px;color:var(--ink3);line-height:1.5;margin-top:8px}
+</style>
+</head>
+<body>
+  <h1>Faz 2 · Görsel kanıt katmanı</h1>
+  <p class="sub">Tek altyapı, üç adım: (1) göreve foto+not → feed'de thumbnail; (2) fiş galerisi;
+  (3) fişi oku → onaylı kalemler pantry + money'ye. Onaysız hiçbir yazma yok.</p>
+
+  <div class="row">
+    <div class="col">
+      <div class="phone"><div class="notch"></div>
+        <div class="hero"><div class="eyebrow">Tasks · chore detail</div><div class="htitle">Empty dishwasher</div></div>
+        <div class="body">
+          <div class="card">
+            <div class="chore">Empty dishwasher</div>
+            <div class="csub">Your turn · usually every 2 days</div>
+            <div class="attach">
+              <div class="photoThumb">📸</div>
+              <div class="addPhoto">+ add<br/>photo</div>
+            </div>
+            <div class="noteBox">"sparkling ✨ even did the cutlery tray"</div>
+            <span class="doneBtn">Done ✓</span>
+          </div>
+          <div class="shead">Activity</div>
+          <div class="card" style="padding:6px 16px">
+            <div class="feedRow">
+              <div class="fico">🧹</div>
+              <div class="ftext"><b>Betül</b> did Empty dishwasher
+                <div class="fnote">"sparkling ✨ even did the cutlery tray"</div>
+                <div class="ftime">just now</div></div>
+              <div class="fthumb">🍽️</div>
+            </div>
+            <div class="feedRow">
+              <div class="fico">📄</div>
+              <div class="ftext"><b>Serra</b> paid Internet €45<div class="ftime">2h</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">2.1 · Foto + not → feed</div>
+      <div class="capn">Chore detayına foto ve kısa not; Done akışı aynı. Feed satırında küçük
+      thumbnail, dokununca tam ekran. Foto yoksa hiçbir şey değişmez.</div>
+    </div>
+
+    <div class="col">
+      <div class="phone"><div class="notch"></div>
+        <div class="hero"><div class="eyebrow">Money · receipts</div><div class="htitle">Receipts</div></div>
+        <div class="body">
+          <div class="month">August</div>
+          <div class="grid">
+            <div class="gcell"><span>🧾</span>AH · €62,10</div>
+            <div class="gcell"><span>🧾</span>Lidl · €23,80</div>
+            <div class="gcell"><span>🧾</span>Etos · €11,45</div>
+          </div>
+          <div class="month">July</div>
+          <div class="grid">
+            <div class="gcell"><span>🧾</span>AH · €48,95</div>
+            <div class="gcell"><span>🧾</span>Jumbo · €31,20</div>
+          </div>
+          <div class="note">Fiş çek → harcamaya bağla (opsiyonel). Harcama satırından fişi aç.
+          Ay başlıklarıyla sessiz bir arşiv; sayaç yok, hedef yok.</div>
+        </div>
+      </div>
+      <div class="cap">2.2 · Receipt Gallery</div>
+      <div class="capn">Money'de "Receipts" girişi; 📷 ile fiş çek, istersen o günkü harcamaya bağla.</div>
+    </div>
+
+    <div class="col">
+      <div class="phone"><div class="notch"></div>
+        <div class="hero"><div class="eyebrow">Receipt · read it</div><div class="htitle">AH · €62,10</div></div>
+        <div class="body">
+          <div class="card">
+            <div class="shead">Found 5 items — keep what's right</div>
+            <div class="ocr">
+              <div class="oitem"><div class="ock">✓</div><div class="oname">Milk (halfvolle melk)</div><div class="oprice">€1,29</div></div>
+              <div class="oitem"><div class="ock">✓</div><div class="oname">Eggs ×10</div><div class="oprice">€3,49</div></div>
+              <div class="oitem"><div class="ock">✓</div><div class="oname">Bread</div><div class="oprice">€2,19</div></div>
+              <div class="oitem"><div class="ock ockOff">✓</div><div class="oname" style="color:var(--ink3)">Statiegeld (deposit)</div><div class="oprice" style="color:var(--ink3)">€0,45</div></div>
+              <div class="oitem"><div class="ock">✓</div><div class="oname">Coffee beans</div><div class="oprice">€8,99</div></div>
+            </div>
+            <div class="cta">Add 4 to pantry · log €62,10</div>
+            <div class="note">OCR cihazda (Apple Vision, offline). Kalem çıkarımı LLM'de; isim/kart
+            maskelenir. Yanlış kalem: dokun, düzelt ya da işareti kaldır. Onaysız yazma yok.</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">2.3 · OCR + itemize</div>
+      <div class="capn">"Read it" → onay listesi → seçili kalemler pantry'ye, toplam money'ye.</div>
+    </div>
+  </div>
+</body>
+</html>

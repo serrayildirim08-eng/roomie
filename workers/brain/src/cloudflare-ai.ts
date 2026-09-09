@@ -23,7 +23,7 @@ export interface CfAiBinding {
   run(
     model: string,
     inputs: {
-      messages: Array<{ role: string; content: string }>;
+      messages: { role: string; content: string }[];
       max_tokens?: number;
       temperature?: number;
     },

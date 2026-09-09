@@ -56,7 +56,7 @@ export async function applyFragments(
     if (f.target === 'expense' && f.title && f.amountCents) {
       await db.transact(
         db.tx.expenses[id()]
-          .update({ title: f.title, amountCents: f.amountCents, currency: 'EUR', createdAt: ts })
+          .update({ title: f.title, amountCents: f.amountCents, currency: 'EUR', householdId, createdAt: ts })
           .link({ household: householdId, paidBy: userId, participants: orderedMembers }),
       );
       await log('expense_added', { title: f.title, amountCents: f.amountCents, paidByName: userName });
@@ -89,6 +89,7 @@ export async function applyFragments(
               status: toStatus,
               shelfLifeDays: resolved.shelfLifeDays ?? undefined,
               addedAt: ts,
+              householdId,
               createdAt: ts,
               updatedAt: ts,
             })
@@ -100,7 +101,7 @@ export async function applyFragments(
         // A purchase: feed the cadence log, same as Kitchen's "Got it ✓".
         await db.transact(
           db.tx.purchases[id()]
-            .update({ itemName: resolved.normalizedName, at: ts })
+            .update({ itemName: resolved.normalizedName, at: ts, householdId })
             .link({ household: householdId, by: userId }),
         );
         await log('pantry_got', { item: resolved.name });
@@ -129,7 +130,9 @@ export async function applyFragments(
       const next = nextTurn(orderedMembers, holderId);
       await db.transact([
         db.tx.chores[chore.id].update({ updatedAt: ts }).link({ turn: next ?? userId }),
-        db.tx.choreEvents[id()].update({ type: 'done', at: ts }).link({ chore: chore.id, by: userId }),
+        db.tx.choreEvents[id()]
+          .update({ type: 'done', at: ts, householdId })
+          .link({ chore: chore.id, by: userId }),
       ]);
       await log('chore_done', { chore: chore.name });
       applied.push(`✨ ${chore.name} done`);
@@ -139,7 +142,7 @@ export async function applyFragments(
     if (f.target === 'personal_task' && f.title) {
       await db.transact(
         db.tx.personalTasks[id()]
-          .update({ title: f.title, status: 'open', createdAt: ts })
+          .update({ title: f.title, status: 'open', createdAt: ts, ownerId: userId })
           .link({ household: householdId, owner: userId }),
       );
       applied.push(`🤍 ${f.title}`);

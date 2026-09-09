@@ -12,13 +12,55 @@ export interface SuggestedChore {
   hint: string; // typical cadence, faint copy only
 }
 
+// Soft cadence (in days) derived from a library hint string. Library-added
+// chores get a gentle "due signal" cadence; anything we can't map (collection
+// day / when full / as needed) stays undefined → no signal at all, by design.
+// Manually-typed chores never pass through here, so they stay signal-free too.
+export function cadenceFromHint(hint?: string): number | undefined {
+  switch (hint) {
+    case 'daily':
+      return 1;
+    case 'weekly':
+      return 7;
+    case 'every 2 weeks':
+      return 14;
+    case 'monthly':
+      return 30;
+    default:
+      return undefined;
+  }
+}
+
 export interface ChoreGroup {
   group: string;
   chores: SuggestedChore[];
 }
 
-// Auto-seeded at home creation. Subset of the library below.
-export const STARTER_CHORES = ['Dishes', 'Trash', 'Bathroom', 'Vacuum', 'Mop floors'];
+// Home-type keys for the starter packs below. The chooser at home creation maps
+// these to friendly labels ("2-roommate apartment", "Student flat", …).
+export type HomeType = 'apartment' | 'student' | 'couple' | 'house';
+
+// Starter packs by home type — each is a different opening hand of chores, all
+// drawn from CHORE_LIBRARY/STARTER_CHORES below so suggestions + dedup stay
+// consistent. 'apartment' is the default and reproduces the original 5.
+export const STARTER_PACKS: Record<HomeType, string[]> = {
+  apartment: ['Dishes', 'Trash', 'Bathroom', 'Vacuum', 'Mop floors'],
+  student: ['Dishes', 'Trash', 'Bathroom', 'Vacuum', 'Paper & cardboard'],
+  couple: ['Dishes', 'Trash', 'Bathroom', 'Clean fridge'],
+  house: [
+    'Dishes',
+    'Trash',
+    'Bathroom',
+    'Vacuum',
+    'Mop floors',
+    'Tidy living room',
+    'Paper & cardboard',
+  ],
+};
+
+// Auto-seeded at home creation when no home type is chosen. Subset of the
+// library below; identical to the default 'apartment' pack.
+export const STARTER_CHORES = STARTER_PACKS.apartment;
 
 export const CHORE_LIBRARY: ChoreGroup[] = [
   {

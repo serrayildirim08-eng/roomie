@@ -10,6 +10,13 @@ import { i } from '@instantdb/react-native';
 
 const _schema = i.schema({
   entities: {
+    // `$files` is InstantDB's built-in storage namespace — declared for typing
+    // so feed queries can read photo urls. Access is path-gated in perms.
+    $files: i.entity({
+      path: i.string().unique().indexed(),
+      url: i.string(),
+    }),
+
     // `$users` is InstantDB's built-in auth identity. We only extend it via links.
     $users: i.entity({
       email: i.string().unique().indexed().optional(),
@@ -25,6 +32,17 @@ const _schema = i.schema({
     // A shared home. The unit everything else hangs off of.
     households: i.entity({
       name: i.string(),
+      // Short human-shareable join code (e.g. "RZ7K2P"). Optional because
+      // pre-migration homes predate it (backfilled on first view). Knowing the
+      // code is what lets a non-member find + join the home — see the
+      // households.view rule (isMember || inviteCode == ruleParams.code).
+      inviteCode: i.string().optional().indexed(),
+      // Denormalized creator auth id. The `creator` LINK can't be read by a
+      // create permission (the link is born in the same transaction), so the
+      // create rule checks this plain field instead. See instant.perms.ts.
+      // Optional because pre-migration rows predate the field (they're already
+      // created, so the create rule never re-checks them).
+      creatorId: i.string().optional().indexed(),
       createdAt: i.date().indexed(),
     }),
 
@@ -32,6 +50,11 @@ const _schema = i.schema({
     memberships: i.entity({
       role: i.string(), // 'owner' | 'member'
       status: i.string(), // 'active' | 'invited' | 'removed'
+      // Denormalized owner auth id — the security-critical create check
+      // (`you may only create your OWN membership`) reads this, not the `user`
+      // link, which isn't visible to a create rule in the same transaction.
+      // Optional because pre-migration rows predate the field.
+      userId: i.string().optional().indexed(),
       displayName: i.string().optional(), // denormalized name for member lists
       joinedAt: i.date().indexed(),
     }),
@@ -39,7 +62,16 @@ const _schema = i.schema({
     // The home diary — the connective tissue across modules.
     activityEvents: i.entity({
       type: i.string(), // e.g. 'expense_added', 'chore_done', 'pantry_added'
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       metadata: i.json().optional(),
+      // Optional photo proof — plain references, not a link: $files can't be
+      // schema-linked today (SDK types + server both reject), and the
+      // path-scoped $files perms already household-gate reads.
+      photoFileId: i.string().optional(),
+      photoPath: i.string().optional(),
       createdAt: i.date().indexed(),
     }),
 
@@ -48,6 +80,10 @@ const _schema = i.schema({
       title: i.string(),
       amountCents: i.number(), // store money in cents to avoid float errors
       currency: i.string(), // 'EUR'
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       createdAt: i.date().indexed(),
     }),
 
@@ -55,6 +91,12 @@ const _schema = i.schema({
     settlements: i.entity({
       amountCents: i.number(),
       currency: i.string(),
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
+      // Denormalized payer auth id — same reason; create checks auth.id == this.
+      fromUserId: i.string().optional().indexed(),
       createdAt: i.date().indexed(),
     }),
 
@@ -65,7 +107,13 @@ const _schema = i.schema({
       normalizedName: i.string().indexed(),
       category: i.string(), // GroceryCategory
       status: i.string(), // 'in' | 'out'
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       shelfLifeDays: i.number().optional(), // null = unknown → never ages
+      barcode: i.string().optional().indexed(), // set when added via Grocery Scan
+      dietTags: i.json().optional(), // string[] of diet flags from the barcode: 'vegan'|'vegetarian'|'gluten-free'|'lactose-free'
       addedAt: i.date().indexed(), // reset on every restock; drives aging
       createdAt: i.date().indexed(),
       updatedAt: i.date().indexed(),
@@ -75,6 +123,10 @@ const _schema = i.schema({
     // feeds the cadence/"running low" predictions later.
     purchases: i.entity({
       itemName: i.string().indexed(), // normalized name
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       at: i.date().indexed(),
     }),
 
@@ -82,6 +134,15 @@ const _schema = i.schema({
     // `turn` link; rotation order is membership join order.
     chores: i.entity({
       name: i.string(),
+      area: i.string().optional(), // 'kitchen'|'bathroom'|'living'|'trash'|'admin'|'supplies'|'other'
+      effort: i.string().optional(), // 'tiny'|'normal'|'big'
+      doneNote: i.string().optional(), // optional "what counts as done"
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
+      cadenceDays: i.number().optional(), // optional soft cadence; unset = no due signal
+      snoozedUntil: i.date().optional(), // ms timestamp; soft "resting until"
       createdAt: i.date().indexed(),
       updatedAt: i.date().indexed(),
     }),
@@ -90,7 +151,56 @@ const _schema = i.schema({
     // History only, never counts — the no-shame rule.
     choreEvents: i.entity({
       type: i.string(), // 'done' | 'pass'
+      // Denormalized household id — create rules can't see links born in
+      // the same transaction (see memberships.userId), so creation is gated
+      // on this field via auth.ref. Optional: pre-migration rows predate it.
+      householdId: i.string().optional().indexed(),
       at: i.date().indexed(),
+    }),
+
+    // Money — a monthly template (rent, internet, Spotify). "Paid" stamps an
+    // ORDINARY expense (paidBy + participants copied from here), so split and
+    // balances ride the existing fairness math — no parallel ledger.
+    bills: i.entity({
+      name: i.string(),
+      amountCents: i.number(),
+      currency: i.string(), // 'EUR'
+      dueDay: i.number(), // 1–31, day of month
+      lastPaidPeriod: i.string().optional(), // 'YYYY-MM' — blocks double-stamp
+      householdId: i.string().optional().indexed(), // create-rule gate
+      createdAt: i.date().indexed(),
+      updatedAt: i.date().indexed(),
+    }),
+
+    // Money — a receipt photo. Optionally tied to one expense; otherwise it
+    // just lives in the gallery as a quiet archive.
+    receipts: i.entity({
+      fileId: i.string(), // $files id (plain reference, like activityEvents)
+      path: i.string(),
+      label: i.string().optional(), // e.g. "AH · €62,10" — free text
+      householdId: i.string().optional().indexed(), // create-rule gate
+      createdAt: i.date().indexed(),
+    }),
+
+    // Calendar — a single all-day happening ("guests", "landlord visit").
+    // Bills are NOT events: due dots derive from bills.dueDay every month.
+    events: i.entity({
+      name: i.string(),
+      date: i.string().indexed(), // 'YYYY-MM-DD' — all-day, no clock in v1
+      note: i.string().optional(),
+      householdId: i.string().optional().indexed(), // create-rule gate
+      createdAt: i.date().indexed(),
+    }),
+
+    // A quiet, personal heads-up ("Serra already got the milk — no need").
+    // One recipient, dismissible. NOT the public diary — that's activityEvents.
+    nudges: i.entity({
+      type: i.string(), // 'claim_covered'
+      metadata: i.json().optional(), // { item, gotByName }
+      householdId: i.string().optional().indexed(), // create-rule gate
+      toUserId: i.string().optional().indexed(), // the only reader
+      createdAt: i.date().indexed(),
+      seenAt: i.date().optional(), // set on dismiss
     }),
 
     // Tasks — personal to-dos. One owner, no rotation. Scoped to the
@@ -98,6 +208,8 @@ const _schema = i.schema({
     personalTasks: i.entity({
       title: i.string(),
       status: i.string(), // 'open' | 'done'
+      // Denormalized owner auth id — same reason; create checks auth.id == this.
+      ownerId: i.string().optional().indexed(),
       createdAt: i.date().indexed(),
     }),
   },
@@ -155,6 +267,34 @@ const _schema = i.schema({
     },
 
     // Kitchen links.
+    billHousehold: {
+      forward: { on: 'bills', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'bills' },
+    },
+    billPaidBy: {
+      forward: { on: 'bills', has: 'one', label: 'paidBy' },
+      reverse: { on: '$users', has: 'many', label: 'billsPaid' },
+    },
+    billParticipants: {
+      forward: { on: 'bills', has: 'many', label: 'participants' },
+      reverse: { on: '$users', has: 'many', label: 'billShares' },
+    },
+    receiptHousehold: {
+      forward: { on: 'receipts', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'receipts' },
+    },
+    receiptExpense: {
+      forward: { on: 'receipts', has: 'one', label: 'expense' },
+      reverse: { on: 'expenses', has: 'many', label: 'receipts' },
+    },
+    eventHousehold: {
+      forward: { on: 'events', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'events' },
+    },
+    nudgeHousehold: {
+      forward: { on: 'nudges', has: 'one', label: 'household' },
+      reverse: { on: 'households', has: 'many', label: 'nudges' },
+    },
     pantryHousehold: {
       forward: { on: 'pantryItems', has: 'one', label: 'household' },
       reverse: { on: 'households', has: 'many', label: 'pantryItems' },

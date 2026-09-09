@@ -9,11 +9,12 @@
 // turn advances). Pass is turn-holder-only and penalty-free. Tap a chore →
 // quiet chronological history. No counts, no points, no streaks, ever.
 //
-// New homes come preloaded with four classic chores (seeded at creation,
+// New homes come preloaded with five classic chores (seeded at creation,
 // removable like any other). Whoever ADDS a chore takes its first turn.
 
 import { id } from '@instantdb/react-native';
-import { useState } from 'react';
+import { Image } from 'expo-image';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +25,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -36,16 +40,245 @@ import {
 } from '@/components/ui/kit';
 import { Roomie, RoomieFonts } from '@/constants/theme';
 import { logActivity, timeAgo } from '@/features/activity/activity';
+import { pickPhoto, uploadActivityPhoto } from '@/features/activity/photo';
 import { nowMs } from '@/features/money/money-logic';
 import { db } from '@/lib/db';
 
+import {
+  EFFORTS,
+  areaLabel,
+  choreSoftState,
+  effortLabel,
+  inferAreaFromGroup,
+  softStateLabel,
+} from './chore-state';
 import { effectiveTurn, nextTurn } from './rotation';
-import { CHORE_LIBRARY } from './starter';
+import { CHORE_LIBRARY, cadenceFromHint } from './starter';
 
 // "vfya+clerk_test@example.com" → "vfya"
 function emailName(email?: string): string | undefined {
   const local = email?.split('@')[0]?.replace(/\+.*$/, '');
   return local || undefined;
+}
+
+// A row whose secondary actions (Pass / Remove) stay hidden until you swipe
+// left — keeps the resting row to one clear action (Done).
+function SwipeRow({
+  children,
+  onPass,
+  onSnooze,
+  onRemove,
+}: {
+  children: ReactNode;
+  onPass?: () => void;
+  onSnooze?: () => void;
+  onRemove: () => void;
+}) {
+  const ref = useRef<SwipeableMethods>(null);
+  return (
+    <ReanimatedSwipeable
+      ref={ref}
+      friction={2}
+      rightThreshold={36}
+      overshootRight={false}
+      renderRightActions={() => (
+        <View style={styles.actions}>
+          {onSnooze ? (
+            <Pressable
+              style={[styles.action, styles.actSnooze]}
+              onPress={() => {
+                ref.current?.close();
+                onSnooze();
+              }}
+            >
+              <Text style={styles.actSnoozeLabel}>Tomorrow</Text>
+            </Pressable>
+          ) : null}
+          {onPass ? (
+            <Pressable
+              style={[styles.action, styles.actPass]}
+              onPress={() => {
+                ref.current?.close();
+                onPass();
+              }}
+            >
+              <Text style={styles.actPassLabel}>Pass</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            style={[styles.action, styles.actRemove]}
+            onPress={() => {
+              ref.current?.close();
+              onRemove();
+            }}
+          >
+            <Text style={styles.actRemoveLabel}>Remove</Text>
+          </Pressable>
+        </View>
+      )}
+    >
+      {children}
+    </ReanimatedSwipeable>
+  );
+}
+
+// "Done ✓" with a single quiet touch: a soft scale dip on press, then it
+// settles. That's the whole reward — no confetti, no counter, no badge. Just a
+// small, adult acknowledgement that the tap landed. The turn advances
+// elsewhere; this stays purely transient.
+function DoneButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.done, pressed && styles.donePressed]}
+    >
+      <Text style={styles.doneLabel}>Done ✓</Text>
+    </Pressable>
+  );
+}
+
+// One chore's quiet history, lifted into a real component so the optional
+// extras (effort chips + "what counts as done" note) can hold their own draft
+// state without breaking the rules of hooks. All of it is optional — a chore
+// with no effort and no note still just shows its history.
+type ChoreEventLite = {
+  id: string;
+  type: string;
+  at: number | string;
+  by?: { id?: string | null } | null;
+};
+
+function ChoreDetail({
+  choreId,
+  doneNote,
+  effort,
+  events,
+  userId,
+  nameById,
+  householdId,
+  onDoneWithProof,
+}: {
+  choreId: string;
+  doneNote?: string | null;
+  effort?: string | null;
+  events: ChoreEventLite[];
+  userId: string;
+  nameById: Record<string, string>;
+  householdId: string;
+  onDoneWithProof: (opts: { photo?: { fileId: string; path: string } | null; note?: string }) => void;
+}) {
+  const [note, setNote] = useState(doneNote ?? '');
+  // Optional proof: one photo + a short line. Both transient until Done.
+  const [proofUri, setProofUri] = useState<string | null>(null);
+  const [proofNote, setProofNote] = useState('');
+  const [proofBusy, setProofBusy] = useState(false);
+
+  const onProofDone = async () => {
+    if (proofBusy) return;
+    setProofBusy(true);
+    let photo: { fileId: string; path: string } | null = null;
+    if (proofUri) {
+      photo = await uploadActivityPhoto(householdId, proofUri);
+      if (!photo) {
+        setProofBusy(false);
+        Alert.alert('Photo didn’t upload', 'The task still counts — Done without it, or try again.');
+        return;
+      }
+    }
+    onDoneWithProof({ photo, note: proofNote });
+    setProofUri(null);
+    setProofNote('');
+    setProofBusy(false);
+  };
+
+  // Only write when the text actually changed — avoids a no-op transaction on
+  // every blur.
+  const saveNote = () => {
+    const trimmed = note.trim();
+    if (trimmed === (doneNote ?? '')) return;
+    void db.transact(db.tx.chores[choreId].update({ doneNote: trimmed }));
+  };
+  const setEffort = (e: string) => {
+    void db.transact(db.tx.chores[choreId].update({ effort: e }));
+  };
+
+  return (
+    <View style={styles.history}>
+      <Text style={styles.detailLabel}>How big is this?</Text>
+      <View style={styles.effortRow}>
+        {EFFORTS.map((e) => {
+          const on = effort === e;
+          return (
+            <Pressable
+              key={e}
+              style={[styles.effortChip, on && styles.effortChipOn]}
+              onPress={() => setEffort(e)}
+            >
+              <Text style={[styles.effortChipLabel, on && styles.effortChipLabelOn]}>
+                {effortLabel(e)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <TextInput
+        style={styles.noteInput}
+        placeholder="What counts as done? (optional)"
+        placeholderTextColor={Roomie.sub}
+        value={note}
+        onChangeText={setNote}
+        onBlur={saveNote}
+        onSubmitEditing={saveNote}
+        returnKeyType="done"
+      />
+
+      <Text style={styles.detailLabel}>Done with a photo?</Text>
+      <View style={styles.proofRow}>
+        <Pressable
+          style={styles.proofAdd}
+          onPress={() => void pickPhoto().then((uri) => uri && setProofUri(uri))}
+        >
+          {proofUri ? (
+            <Image source={{ uri: proofUri }} style={styles.proofThumb} contentFit="cover" />
+          ) : (
+            <Text style={styles.proofAddLabel}>+ add{'\n'}photo</Text>
+          )}
+        </Pressable>
+        <TextInput
+          style={[styles.noteInput, styles.proofNote]}
+          placeholder="A short note (optional)"
+          placeholderTextColor={Roomie.sub}
+          value={proofNote}
+          onChangeText={setProofNote}
+          maxLength={140}
+        />
+      </View>
+      {proofUri || proofNote.trim() ? (
+        <Pressable
+          style={[styles.proofDone, proofBusy && { opacity: 0.6 }]}
+          onPress={() => void onProofDone()}
+          disabled={proofBusy}
+        >
+          <Text style={styles.proofDoneLabel}>{proofBusy ? 'Uploading…' : 'Done ✓ with proof'}</Text>
+        </Pressable>
+      ) : null}
+
+      {events.length === 0 ? (
+        <Text style={styles.historyEmpty}>No history yet.</Text>
+      ) : (
+        events.map((ev) => (
+          <View key={ev.id} style={styles.historyRow}>
+            <Text style={styles.historyText}>
+              {ev.by?.id === userId ? 'You' : (nameById[ev.by?.id ?? ''] ?? 'Someone')}{' '}
+              {ev.type === 'done' ? 'did it' : 'passed'}
+            </Text>
+            <Text style={styles.historyTime}>{timeAgo(Number(ev.at))}</Text>
+          </View>
+        ))
+      )}
+    </View>
+  );
 }
 
 export function TasksScreen({ userId }: { userId: string }) {
@@ -60,12 +293,16 @@ export function TasksScreen({ userId }: { userId: string }) {
           events: { $: { order: { at: 'desc' }, limit: 12 }, by: {} },
         },
         personalTasks: { $: { where: { status: 'open' } }, owner: {} },
+        // Shopping I said I'd get — a promise is a task.
+        pantryItems: { $: { where: { status: 'out' } }, claimedBy: {} },
       },
     },
   });
 
   const [houseDraft, setHouseDraft] = useState('');
   const [mineDraft, setMineDraft] = useState('');
+  // In-flight guard so a fast double-tap can't add the same chore/task twice.
+  const savingRef = useRef(false);
   const [openChoreId, setOpenChoreId] = useState<string | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
 
@@ -111,6 +348,8 @@ export function TasksScreen({ userId }: { userId: string }) {
   const myTasks = household.personalTasks
     .filter((t) => t.owner?.id === userId)
     .sort((a, b) => Number(a.createdAt) - Number(b.createdAt));
+  // "I'll get it" promises live here too — one glance covers errands.
+  const myClaims = (household.pantryItems ?? []).filter((it) => it.claimedBy?.id === userId);
 
   const taskStats = [
     { k: 'Your turn', v: String(myChores.length) },
@@ -126,71 +365,123 @@ export function TasksScreen({ userId }: { userId: string }) {
     chores: g.chores.filter((s) => !choreNamesLower.has(s.name.toLowerCase())),
   })).filter((g) => g.chores.length > 0);
 
-  const onAddSuggestion = async (name: string) => {
+  const onAddSuggestion = async (name: string, group: string, hint: string) => {
+    if (savingRef.current) return; // already writing — ignore the double-tap
+    savingRef.current = true;
     const ts = nowMs();
-    await db.transact(
-      db.tx.chores[id()]
-        .update({ name, createdAt: ts, updatedAt: ts })
-        .link({ household: household.id, turn: userId }),
-    );
-    await logActivity({
-      householdId: household.id,
-      actorId: userId,
-      actorName: myName,
-      type: 'chore_added',
-      metadata: { chore: name },
-    });
+    // Library rows know their room + a soft cadence; both are optional and only
+    // ever help (a missing cadence simply means "no due signal"). Typed-by-hand
+    // chores skip this path entirely, so they stay signal-free.
+    const cadenceDays = cadenceFromHint(hint);
+    const fields: {
+      name: string;
+      createdAt: number;
+      updatedAt: number;
+      area: string;
+      cadenceDays?: number;
+    } = { name, createdAt: ts, updatedAt: ts, area: inferAreaFromGroup(group) };
+    (fields as Record<string, unknown>).householdId = household.id; // create-rule gate
+    if (cadenceDays != null) fields.cadenceDays = cadenceDays;
+    try {
+      await db.transact(
+        db.tx.chores[id()].update(fields).link({ household: household.id, turn: userId }),
+      );
+      await logActivity({
+        householdId: household.id,
+        actorId: userId,
+        actorName: myName,
+        type: 'chore_added',
+        metadata: { chore: name },
+      });
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   const onAddHouse = async () => {
     const name = houseDraft.trim().replace(/\s+/g, ' ');
     if (!name) return;
+    if (savingRef.current) return; // already writing — ignore the double-tap
+    savingRef.current = true;
     setHouseDraft('');
     const ts = nowMs();
     const choreId = id();
-    await db.transact(
-      db.tx.chores[choreId]
-        .update({ name, createdAt: ts, updatedAt: ts })
-        // The adder takes the first turn — you brought it up, you start.
-        .link({ household: household.id, turn: userId }),
-    );
-    await logActivity({
-      householdId: household.id,
-      actorId: userId,
-      actorName: myName,
-      type: 'chore_added',
-      metadata: { chore: name },
-    });
+    try {
+      await db.transact(
+        db.tx.chores[choreId]
+          .update({ name, createdAt: ts, updatedAt: ts, householdId: household.id })
+          // The adder takes the first turn — you brought it up, you start.
+          .link({ household: household.id, turn: userId }),
+      );
+      await logActivity({
+        householdId: household.id,
+        actorId: userId,
+        actorName: myName,
+        type: 'chore_added',
+        metadata: { chore: name },
+      });
+    } catch {
+      setHouseDraft(name); // write failed — give the text back so nothing is lost
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   const onAddMine = async () => {
     const title = mineDraft.trim().replace(/\s+/g, ' ');
     if (!title) return;
+    if (savingRef.current) return; // already writing — ignore the double-tap
+    savingRef.current = true;
     setMineDraft('');
     const taskId = id();
-    await db.transact(
-      db.tx.personalTasks[taskId]
-        .update({ title, status: 'open', createdAt: nowMs() })
-        .link({ household: household.id, owner: userId }),
-    );
-    // Personal tasks stay out of the home diary — they're yours.
+    try {
+      await db.transact(
+        db.tx.personalTasks[taskId]
+          .update({ title, status: 'open', createdAt: nowMs(), ownerId: userId })
+          .link({ household: household.id, owner: userId }),
+      );
+      // Personal tasks stay out of the home diary — they're yours.
+    } catch {
+      setMineDraft(title); // write failed — give the text back so nothing is lost
+    } finally {
+      savingRef.current = false;
+    }
+  };
+
+  // Same write as Kitchen's "Got it ✓" (self-claim case): restock + purchase
+  // log + diary line. Kept inline; if a third caller appears, extract a helper.
+  const onClaimGot = async (itemId: string, itemName: string, normalizedName: string) => {
+    const ts = nowMs();
+    try {
+      await db.transact([
+        db.tx.pantryItems[itemId]
+          .update({ status: 'in', addedAt: ts, updatedAt: ts })
+          .unlink({ claimedBy: userId }),
+        db.tx.purchases[id()]
+          .update({ itemName: normalizedName, at: ts, householdId: household.id })
+          .link({ household: household.id, by: userId }),
+      ]);
+    } catch {
+      Alert.alert('Could not save', 'That tap didn’t stick — try again in a moment.');
+      return;
+    }
+    await logActivity({
+      householdId: household.id,
+      actorId: userId,
+      actorName: myName,
+      type: 'pantry_got',
+      metadata: { item: itemName },
+    });
   };
 
   const onMineDone = async (taskId: string) => {
     await db.transact(db.tx.personalTasks[taskId].update({ status: 'done' }));
   };
 
-  const onMineDelete = (taskId: string, title: string) => {
-    Alert.alert('Remove this task?', `"${title}" will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          void db.transact(db.tx.personalTasks[taskId].delete());
-        },
-      },
-    ]);
+  // Swipe → Remove is already a two-step, deliberate gesture, so it deletes
+  // directly (no extra confirm dialog).
+  const onMineDelete = (taskId: string) => {
+    void db.transact(db.tx.personalTasks[taskId].delete());
   };
 
   const advance = async (
@@ -198,45 +489,52 @@ export function TasksScreen({ userId }: { userId: string }) {
     choreName: string,
     holderId: string | null,
     eventType: 'done' | 'pass',
+    proof?: { photo?: { fileId: string; path: string } | null; note?: string },
   ) => {
     const ts = nowMs();
     const next = nextTurn(memberIds, holderId);
     const eventId = id();
-    await db.transact([
-      db.tx.chores[choreId].update({ updatedAt: ts }).link({ turn: next ?? userId }),
-      db.tx.choreEvents[eventId]
-        .update({ type: eventType, at: ts })
-        .link({ chore: choreId, by: userId }),
-    ]);
+    try {
+      await db.transact([
+        db.tx.chores[choreId].update({ updatedAt: ts }).link({ turn: next ?? userId }),
+        db.tx.choreEvents[eventId]
+          .update({ type: eventType, at: ts, householdId: household.id })
+          .link({ chore: choreId, by: userId }),
+      ]);
+    } catch {
+      // Write failed (offline, or a permission reject) — say so softly instead
+      // of a button that silently does nothing.
+      Alert.alert('Could not save', 'That tap didn’t stick — try again in a moment.');
+      return;
+    }
     await logActivity({
       householdId: household.id,
       actorId: userId,
       actorName: myName,
       type: eventType === 'done' ? 'chore_done' : 'chore_passed',
       metadata: { chore: choreName },
+      photo: proof?.photo,
+      note: proof?.note,
     });
   };
 
   const onDeleteChore = (choreId: string, choreName: string) => {
-    Alert.alert('Remove this chore?', `"${choreName}" and its history will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            await db.transact(db.tx.chores[choreId].delete());
-            await logActivity({
-              householdId: household.id,
-              actorId: userId,
-              actorName: myName,
-              type: 'chore_removed',
-              metadata: { chore: choreName },
-            });
-          })();
-        },
-      },
-    ]);
+    void (async () => {
+      await db.transact(db.tx.chores[choreId].delete());
+      await logActivity({
+        householdId: household.id,
+        actorId: userId,
+        actorName: myName,
+        type: 'chore_removed',
+        metadata: { chore: choreName },
+      });
+    })();
+  };
+
+  // Gentle "move to tomorrow" — a soft pause, never a skip. The turn stays put
+  // (snooze is about timing, not fairness), so whoever holds it still holds it.
+  const onSnoozeChore = (choreId: string) => {
+    void db.transact(db.tx.chores[choreId].update({ snoozedUntil: nowMs() + 86_400_000 }));
   };
 
   const renderChore = (chore: (typeof chores)[number]) => {
@@ -244,57 +542,83 @@ export function TasksScreen({ userId }: { userId: string }) {
     const mine = holderId === userId;
     const open = openChoreId === chore.id;
     const events = chore.events ?? [];
-    return (
-      <View key={chore.id} style={styles.choreCard}>
-        <Pressable style={styles.choreRow} onPress={() => setOpenChoreId(open ? null : chore.id)}>
-          <Text style={styles.choreName}>{chore.name}</Text>
-          <View style={[styles.turnPill, mine && styles.turnPillMine]}>
-            <Text style={[styles.turnPillLabel, mine && styles.turnPillLabelMine]}>
-              {mine ? 'Your turn' : (nameById[holderId ?? ''] ?? 'someone')}
-            </Text>
-          </View>
-          {mine ? (
-            <Pressable
-              style={styles.pass}
-              onPress={() => advance(chore.id, chore.name, holderId, 'pass')}
-            >
-              <Text style={styles.passLabel}>Pass</Text>
-            </Pressable>
-          ) : null}
-          <Pressable
-            style={styles.done}
-            onPress={() => advance(chore.id, chore.name, holderId, 'done')}
-          >
-            <Text style={styles.doneLabel}>Done ✓</Text>
-          </Pressable>
-          <Pressable
-            style={styles.delete}
-            onPress={() => onDeleteChore(chore.id, chore.name)}
-            hitSlop={8}
-            accessibilityLabel={`Remove ${chore.name}`}
-          >
-            <Text style={styles.deleteLabel}>✕</Text>
-          </Pressable>
-        </Pressable>
 
-        {open ? (
-          <View style={styles.history}>
-            {events.length === 0 ? (
-              <Text style={styles.historyEmpty}>No history yet.</Text>
-            ) : (
-              events.map((ev) => (
-                <View key={ev.id} style={styles.historyRow}>
-                  <Text style={styles.historyText}>
-                    {ev.by?.id === userId ? 'You' : (nameById[ev.by?.id ?? ''] ?? 'Someone')}{' '}
-                    {ev.type === 'done' ? 'did it' : 'passed'}
-                  </Text>
-                  <Text style={styles.historyTime}>{timeAgo(Number(ev.at))}</Text>
+    // Soft state hint — quiet, optional, and silent unless the chore has a
+    // cadence (or is resting). "all_good" shows nothing: no news is good news.
+    const lastEventAt = events[0]?.at;
+    const lastActivityAtMs = lastEventAt != null ? Number(lastEventAt) : Number(chore.createdAt);
+    const snoozedUntilMs = chore.snoozedUntil != null ? Number(chore.snoozedUntil) : null;
+    const state = choreSoftState({
+      cadenceDays: chore.cadenceDays,
+      lastActivityAtMs,
+      snoozedUntilMs,
+      nowMs: nowMs(),
+    });
+    const snoozed = state === 'snoozed';
+    const hint = state !== 'all_good' ? softStateLabel(state) : null;
+    const areaPill = areaLabel(chore.area);
+    const effortPill = effortLabel(chore.effort);
+    const hasPills = !!hint || !!areaPill || !!effortPill;
+
+    return (
+      <SwipeRow
+        key={chore.id}
+        onPass={mine ? () => advance(chore.id, chore.name, holderId, 'pass') : undefined}
+        onSnooze={mine ? () => onSnoozeChore(chore.id) : undefined}
+        onRemove={() => onDeleteChore(chore.id, chore.name)}
+      >
+        <View style={[styles.choreCard, snoozed && styles.choreCardResting]}>
+          <Pressable style={styles.choreRow} onPress={() => setOpenChoreId(open ? null : chore.id)}>
+            <View style={[styles.turnBar, mine ? styles.turnBarMine : styles.turnBarOther]} />
+            <View style={styles.choreNameWrap}>
+              <Text style={styles.choreName}>{chore.name}</Text>
+              {hasPills ? (
+                <View style={styles.pillRow}>
+                  {hint ? (
+                    <Text
+                      style={[
+                        styles.pill,
+                        snoozed
+                          ? styles.pillRest
+                          : state === 'needs_attention'
+                            ? styles.pillAttention
+                            : styles.pillSoon,
+                      ]}
+                    >
+                      {hint}
+                    </Text>
+                  ) : null}
+                  {areaPill ? <Text style={[styles.pill, styles.pillNeutral]}>{areaPill}</Text> : null}
+                  {effortPill ? (
+                    <Text style={[styles.pill, styles.pillNeutral]}>{effortPill}</Text>
+                  ) : null}
                 </View>
-              ))
-            )}
-          </View>
-        ) : null}
-      </View>
+              ) : null}
+              {!mine ? (
+                <Text style={styles.choreSub}>
+                  {nameById[holderId ?? ''] ?? 'someone'}’s turn
+                </Text>
+              ) : null}
+            </View>
+            <DoneButton onPress={() => advance(chore.id, chore.name, holderId, 'done')} />
+          </Pressable>
+
+          {open ? (
+            <ChoreDetail
+              choreId={chore.id}
+              doneNote={chore.doneNote}
+              effort={chore.effort}
+              events={events}
+              userId={userId}
+              nameById={nameById}
+              householdId={household.id}
+              onDoneWithProof={(opts) =>
+                void advance(chore.id, chore.name, holderId, 'done', opts)
+              }
+            />
+          ) : null}
+        </View>
+      </SwipeRow>
     );
   };
 
@@ -312,23 +636,29 @@ export function TasksScreen({ userId }: { userId: string }) {
           <View style={styles.section}>
             <SectionHead title="Mine" />
             {myChores.map(renderChore)}
-            {myTasks.map((t) => (
-              <View key={t.id} style={styles.mineRow}>
-                <Text style={styles.mineTitle}>{t.title}</Text>
-                <Pressable style={styles.done} onPress={() => onMineDone(t.id)}>
-                  <Text style={styles.doneLabel}>Done ✓</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.delete}
-                  onPress={() => onMineDelete(t.id, t.title)}
-                  hitSlop={8}
-                  accessibilityLabel={`Remove ${t.title}`}
-                >
-                  <Text style={styles.deleteLabel}>✕</Text>
-                </Pressable>
+            {myClaims.map((it) => (
+              <View key={it.id} style={[styles.choreCard, styles.mineCard]}>
+                <View style={styles.choreRow}>
+                  <View style={[styles.turnBar, styles.turnBarMine]} />
+                  <Text style={[styles.choreName, styles.choreNameWrap]}>
+                    Get {it.name} <Text style={styles.claimTag}>🛒 you said you’d get it</Text>
+                  </Text>
+                  <DoneButton onPress={() => onClaimGot(it.id, it.name, it.normalizedName)} />
+                </View>
               </View>
             ))}
-            {myTasks.length === 0 && myChores.length === 0 ? (
+            {myTasks.map((t) => (
+              <SwipeRow key={t.id} onRemove={() => onMineDelete(t.id)}>
+                <View style={[styles.choreCard, styles.mineCard]}>
+                  <View style={styles.choreRow}>
+                    <View style={[styles.turnBar, styles.turnBarMine]} />
+                    <Text style={[styles.choreName, styles.choreNameWrap]}>{t.title}</Text>
+                    <DoneButton onPress={() => onMineDone(t.id)} />
+                  </View>
+                </View>
+              </SwipeRow>
+            ))}
+            {myTasks.length === 0 && myChores.length === 0 && myClaims.length === 0 ? (
               <Text style={styles.muted}>Nothing on your plate. 🤍</Text>
             ) : null}
             <View style={styles.addRow}>
@@ -384,7 +714,7 @@ export function TasksScreen({ userId }: { userId: string }) {
                       <Pressable
                         key={s.name}
                         style={styles.libRow}
-                        onPress={() => onAddSuggestion(s.name)}
+                        onPress={() => onAddSuggestion(s.name, g.group, s.hint)}
                       >
                         <Text style={styles.libName}>+ {s.name}</Text>
                         <Text style={styles.libHint}>{s.hint}</Text>
@@ -437,6 +767,36 @@ const styles = StyleSheet.create({
   },
   addButtonLabel: { color: Roomie.onAccent, fontSize: 24, fontFamily: RoomieFonts.bodyBold },
   muted: { fontSize: 15, fontFamily: RoomieFonts.body, color: Roomie.sub },
+  proofRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  proofAdd: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: Roomie.rule,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  proofAddLabel: {
+    fontSize: 11,
+    fontFamily: RoomieFonts.bodySemi,
+    color: Roomie.ink3,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  proofThumb: { width: 64, height: 64 },
+  proofNote: { flex: 1 },
+  proofDone: {
+    alignSelf: 'flex-start',
+    backgroundColor: Roomie.forest,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  proofDoneLabel: { color: '#fff', fontSize: 13, fontFamily: RoomieFonts.bodySemi },
+  claimTag: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
   choreCard: {
     backgroundColor: Roomie.card,
     borderRadius: 18,
@@ -449,37 +809,51 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
   },
-  choreRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
-  choreName: { flex: 1, fontSize: 15.5, fontFamily: RoomieFonts.display, color: Roomie.ink },
-  turnPill: {
-    borderRadius: 999,
-    paddingVertical: 5,
-    paddingHorizontal: 11,
-    backgroundColor: Roomie.input,
-    borderWidth: 1,
-    borderColor: Roomie.hairline,
+  choreRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
+  turnBar: { width: 4, alignSelf: 'stretch', borderRadius: 9, minHeight: 22 },
+  turnBarMine: { backgroundColor: Roomie.coral },
+  turnBarOther: { backgroundColor: Roomie.hairline },
+  choreNameWrap: { flex: 1 },
+  choreName: { fontSize: 16, fontFamily: RoomieFonts.display, color: Roomie.ink },
+  choreSub: { fontSize: 11.5, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink3, marginTop: 1 },
+  // a chore that's resting sits a touch quieter — never hidden, never harsh
+  choreCardResting: { opacity: 0.62 },
+  // tiny quiet pills under the name (soft state / area / effort) — all optional
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 4 },
+  pill: {
+    fontSize: 10.5,
+    fontFamily: RoomieFonts.bodyBold,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 7,
+    overflow: 'hidden',
   },
-  turnPillMine: { backgroundColor: Roomie.accent, borderColor: Roomie.accent },
-  turnPillLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
-  turnPillLabelMine: { color: Roomie.onAccent, fontFamily: RoomieFonts.bodyBold },
-  pass: {
-    borderWidth: 1,
-    borderColor: Roomie.hairline,
-    backgroundColor: Roomie.input,
-    borderRadius: 12,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-  },
-  passLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
+  pillSoon: { backgroundColor: Roomie.sageSoft, color: Roomie.forest },
+  pillAttention: { backgroundColor: '#FBEFD0', color: '#8A6A12' },
+  pillRest: { backgroundColor: Roomie.hairline, color: Roomie.sub },
+  pillNeutral: { backgroundColor: '#F0EDE4', color: Roomie.sub },
   done: {
     backgroundColor: Roomie.sage,
-    borderRadius: 12,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    shadowColor: Roomie.dropGreen ?? Roomie.forestInk,
+    shadowOpacity: 0.18,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 3 },
   },
-  doneLabel: { color: Roomie.onAccent, fontSize: 13, fontFamily: RoomieFonts.bodyBold },
-  delete: { padding: 4 },
-  deleteLabel: { fontSize: 15, color: Roomie.danger },
+  donePressed: { transform: [{ scale: 0.94 }], opacity: 0.92 },
+  doneLabel: { color: Roomie.onAccent, fontSize: 14, fontFamily: RoomieFonts.bodyBold },
+  mineCard: {},
+  // swipe-revealed actions
+  actions: { flexDirection: 'row', alignItems: 'stretch', marginLeft: 8 },
+  action: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 18, borderRadius: 18 },
+  actPass: { backgroundColor: Roomie.gold, marginRight: 8 },
+  actPassLabel: { fontFamily: RoomieFonts.bodyBold, fontSize: 14, color: Roomie.forestInk },
+  actSnooze: { backgroundColor: Roomie.sageSoft, marginRight: 8 },
+  actSnoozeLabel: { fontFamily: RoomieFonts.bodyBold, fontSize: 14, color: Roomie.forest },
+  actRemove: { backgroundColor: Roomie.danger },
+  actRemoveLabel: { fontFamily: RoomieFonts.bodyBold, fontSize: 14, color: '#fff' },
   history: {
     borderTopWidth: 1,
     borderTopColor: Roomie.hairline,
@@ -487,21 +861,35 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   historyEmpty: { fontSize: 13, fontFamily: RoomieFonts.body, color: Roomie.sub },
+  // expanded detail extras — effort chips + "what counts as done" note
+  detailLabel: { fontSize: 12, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub, marginBottom: 2 },
+  effortRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 6 },
+  effortChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.card,
+  },
+  effortChipOn: { backgroundColor: Roomie.sageSoft, borderColor: Roomie.forest },
+  effortChipLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.sub },
+  effortChipLabelOn: { color: Roomie.forest },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: Roomie.hairline,
+    backgroundColor: Roomie.input,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: RoomieFonts.body,
+    color: Roomie.ink,
+    marginBottom: 8,
+  },
   historyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
   historyText: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   historyTime: { fontSize: 12, fontFamily: RoomieFonts.body, color: Roomie.ink3 },
-  mineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Roomie.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#EFEBE1',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  mineTitle: { flex: 1, fontSize: 15, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   seedLink: { paddingVertical: 8 },
   seedLinkLabel: { fontSize: 13, fontFamily: RoomieFonts.bodySemi, color: Roomie.forest },
   libGroup: { gap: 2, marginBottom: 6 },

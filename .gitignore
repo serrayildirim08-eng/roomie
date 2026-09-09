@@ -49,3 +49,4 @@ example
 # worker secrets (local dev)
 workers/brain/.dev.vars
 workers/brain/.wrangler/
+graphify-out/

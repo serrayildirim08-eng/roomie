@@ -15,6 +15,7 @@ import {
 } from '@expo-google-fonts/nunito';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
@@ -35,18 +36,20 @@ export default function TabLayout() {
   });
   if (!fontsLoaded) return null; // splash stays up until the app's voice is ready
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <InstantClerkBridge />
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        {/* Signed out → the door. Signed in → the app (tabs). */}
-        <Show when="signed-in">
-          <AnimatedSplashOverlay />
-          <AppTabs />
-        </Show>
-        <Show when="signed-out">
-          <AuthScreen />
-        </Show>
-      </ThemeProvider>
-    </ClerkProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+        <InstantClerkBridge />
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          {/* Signed out → the door. Signed in → the app (tabs). */}
+          <Show when="signed-in">
+            <AnimatedSplashOverlay />
+            <AppTabs />
+          </Show>
+          <Show when="signed-out">
+            <AuthScreen />
+          </Show>
+        </ThemeProvider>
+      </ClerkProvider>
+    </GestureHandlerRootView>
   );
 }

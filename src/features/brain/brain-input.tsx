@@ -75,11 +75,21 @@ export function BrainInput({
     setAck([]);
     try {
       const token = await getToken();
-      const res = await fetch(`${BRAIN_URL}/draft`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ text: note }),
-      });
+      // Guard against a hung request: abort after 15s so the spinner can never
+      // freeze forever — the catch below flips to the error state.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      let res: Response;
+      try {
+        res = await fetch(`${BRAIN_URL}/draft`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ text: note }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
       const body = (await res.json()) as DraftResponse;
       if (!res.ok) throw new Error(body.error ?? `http ${res.status}`);
       setFragments(body.fragments);
@@ -142,6 +152,7 @@ export function BrainInput({
 
       {phase === 'draft' ? (
         <View style={styles.card}>
+          <Text style={styles.reviewNote}>Review before saving — nothing saves until you confirm.</Text>
           {question ? <Text style={styles.question}>🧠 {question}</Text> : null}
           {fragments.map((f, idx) => (
             <View key={idx} style={styles.fragRow}>
@@ -233,6 +244,7 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 8,
   },
+  reviewNote: { fontSize: 12.5, fontFamily: RoomieFonts.body, color: Roomie.sub },
   question: { fontSize: 14, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },
   fragRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   fragText: { flex: 1, fontSize: 14, fontFamily: RoomieFonts.bodySemi, color: Roomie.ink },

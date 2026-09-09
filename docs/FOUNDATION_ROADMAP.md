@@ -1,3 +1,5 @@
+> ⚠️ STALE (2026-07-02): this doc describes the pre-pivot **Vite/PWA/Supabase** stack. Roomie is now **Expo / React Native / InstantDB**. Kept for history — do NOT follow the stack/architecture here. See docs/ROOMIE_RUNDOWN_2026-07-01.md for current state.
+
 # Roomie — Temel (Foundation) Yol Haritası (ELI5)
 
 _Son güncelleme: 9 Haziran 2026_

@@ -21,6 +21,9 @@ export type ActivityType =
   | 'pantry_claimed'
   | 'pantry_got'
   | 'pantry_removed'
+  | 'event_added'
+  | 'bill_added'
+  | 'bill_paid'
   | 'chore_added'
   | 'chore_done'
   | 'chore_passed'
@@ -46,13 +49,22 @@ export async function logActivity(params: {
   actorName: string;
   type: ActivityType;
   metadata?: Record<string, unknown>;
+  // Optional photo proof + note — plain $files references (see photo.ts).
+  photo?: { fileId: string; path: string } | null;
+  note?: string;
 }) {
   const eventId = id();
   await db.transact(
     db.tx.activityEvents[eventId]
       .update({
         type: params.type,
-        metadata: { actorName: params.actorName, ...(params.metadata ?? {}) },
+        metadata: {
+          actorName: params.actorName,
+          ...(params.note?.trim() ? { note: params.note.trim() } : {}),
+          ...(params.metadata ?? {}),
+        },
+        householdId: params.householdId, // create rule reads this, not the link
+        ...(params.photo ? { photoFileId: params.photo.fileId, photoPath: params.photo.path } : {}),
         createdAt: Date.now(),
       })
       .link({ household: params.householdId, actor: params.actorId }),
@@ -74,6 +86,15 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
       return { icon: '👋', text: `${who} joined` };
     case 'member_left':
       return { icon: '🕊️', text: `${who} moved out` };
+    case 'event_added':
+      return { icon: '📅', text: `${who} planned ${metaString(metadata, 'title') ?? 'something'}` };
+    case 'bill_added':
+      return { icon: '📄', text: `${who} set up ${metaString(metadata, 'title') ?? 'a bill'}` };
+    case 'bill_paid':
+      return {
+        icon: '📄',
+        text: `${who} paid ${metaString(metadata, 'title') ?? 'a bill'} ${eur(metadata)}`.trim(),
+      };
     case 'expense_added': {
       const title = metaString(metadata, 'title');
       return {
@@ -115,7 +136,7 @@ export function describeEvent(type: string, metadata: unknown): { icon: string; 
     }
     case 'chore_done': {
       const chore = metaString(metadata, 'chore');
-      return { icon: '✨', text: `${who} did ${chore ?? 'a chore'}` };
+      return { icon: '✨', text: `${who} handled ${chore ?? 'a chore'}` };
     }
     case 'chore_passed': {
       const chore = metaString(metadata, 'chore');

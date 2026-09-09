@@ -106,6 +106,9 @@ export async function groqChat(opts: GroqOpts, label: string): Promise<GroqChoic
       authorization: `Bearer ${opts.apiKey}`,
     },
     body: JSON.stringify(body),
+    // Don't let a hung Groq call stall the request — abort at 12s so the
+    // caller falls through to the Cloudflare AI fallback.
+    signal: AbortSignal.timeout(12000),
   });
   const latencyMs = Date.now() - startedAt;
 

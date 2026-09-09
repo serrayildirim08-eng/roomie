@@ -1,3 +1,5 @@
+> ⚠️ STALE (2026-07-02): this doc describes the pre-pivot **Vite/PWA/Supabase** stack. Roomie is now **Expo / React Native / InstantDB**. Kept for history — do NOT follow the stack/architecture here. See docs/ROOMIE_RUNDOWN_2026-07-01.md for current state.
+
 # Ollie Repository Reuse Audit for Roomie
 
 > Source: `/Users/serrayildirim/ollie` @ branch `feat/brain` · audit date 2026-06-09 · read-only analysis (nothing in Ollie modified).

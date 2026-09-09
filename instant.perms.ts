@@ -17,19 +17,40 @@
 // no longer depends on the row surviving: it reconstructs a former member's
 // balance from the expense/settlement links, which point at $users directly.
 //
-// Known follow-ups (NOT covered here, tracked in docs/CHECKLIST.md):
-//   - Invite code == raw household UUID, so knowing an id is enough to self-
-//     join (membership create is self-only, but not invite-gated yet) — #34.
-//
 // Push with:  npx instant-cli@latest push perms
 
 import type { InstantRules } from '@instantdb/react-native';
 
 // Reusable expressions (InstantDB `bind`): name, expression, name, expression…
 const memberOfHousehold = "auth.id in data.ref('household.memberships.user.id')";
-const creatorOfHousehold = "auth.id in data.ref('household.creator.id')";
+// CREATE rules can't traverse links born in the same transaction (see the
+// memberships.userId note in the schema — this bit us live: every create that
+// checked `memberOfHousehold` was silently rejected once perms were pushed).
+// So creation is gated on the row's denormalized householdId, checked from the
+// AUTH side, whose memberships already exist at rule-eval time.
+const createsInOwnHousehold =
+  "data.householdId != null && data.householdId in auth.ref('$user.memberships.household.id')";
+// Money rows must carry a sane amount: positive, at most €10,000.00 in cents.
+const validAmount = 'data.amountCents > 0 && data.amountCents <= 1000000';
+
+// Files are gated by PATH ONLY ($files rules can't see links). Every upload
+// lives under households/{householdId}/…, so a member may see/create exactly
+// the files whose prefix matches one of their homes. CEL `exists` macro.
+const fileInMyHousehold =
+  "auth.id != null && auth.ref('$user.memberships.household.id')" +
+  ".exists(h, data.path.startsWith('households/' + h + '/'))";
 
 const rules = {
+  // Photos (chore proof, receipts). Append-only like the diary — no deletes
+  // in v1; a wrong photo is Serra-admin territory.
+  $files: {
+    allow: {
+      view: fileInMyHousehold,
+      create: fileInMyHousehold,
+      delete: 'false',
+    },
+  },
+
   // A user is visible to themselves and to anyone sharing a household.
   $users: {
     allow: {
@@ -56,9 +77,17 @@ const rules = {
   // A home. Members see it; the creator owns destructive actions.
   households: {
     allow: {
-      view: 'isMember',
-      create: 'isCreator',
-      update: 'isMember',
+      // Members see their home. A NON-member can see exactly one home: the one
+      // whose inviteCode matches the code they pass as a query ruleParam. No
+      // ruleParam (or a wrong code) → only `isMember` applies, so a stranger
+      // can't enumerate or read homes — they must already know the code.
+      view: "isMember || data.inviteCode == ruleParams.code",
+      // create can't read the `creator` link (born in the same transaction),
+      // so it checks the denormalized creatorId field instead.
+      create: 'auth.id != null && auth.id == data.creatorId',
+      // Only the creator may edit household fields (name, inviteCode) — a
+      // member rewriting the invite code or name is an escalation vector.
+      update: 'isCreator',
       delete: 'isCreator',
     },
     bind: [
@@ -76,7 +105,16 @@ const rules = {
   memberships: {
     allow: {
       view: 'isSelf || isMember',
-      create: 'isSelf',
+      // SECURITY-CRITICAL: you may only create your OWN membership (else a
+      // stranger could join any home / escalate). The `user` link isn't
+      // readable in a create rule, so this checks the denormalized userId.
+      // AND joining is invite-gated (#34): you must pass the home's invite
+      // code as a ruleParam, or be the home's creator (owner bootstrap). Both
+      // refs need the household to pre-exist, so the create flows commit the
+      // household FIRST, then the membership in a second transaction.
+      create:
+        'auth.id != null && auth.id == data.userId && ' +
+        "(ruleParams.code in data.ref('household.inviteCode') || auth.id in data.ref('household.creator.id'))",
       update: 'isSelf',
       delete: 'isSelf || isHouseholdCreator',
     },
@@ -94,7 +132,7 @@ const rules = {
   activityEvents: {
     allow: {
       view: memberOfHousehold,
-      create: memberOfHousehold,
+      create: createsInOwnHousehold,
       update: 'false',
       delete: 'false',
     },
@@ -104,7 +142,7 @@ const rules = {
   expenses: {
     allow: {
       view: memberOfHousehold,
-      create: memberOfHousehold,
+      create: `${createsInOwnHousehold} && ${validAmount}`,
       update: memberOfHousehold,
       delete: memberOfHousehold,
     },
@@ -115,7 +153,7 @@ const rules = {
   settlements: {
     allow: {
       view: memberOfHousehold,
-      create: "auth.id in data.ref('fromUser.id')",
+      create: `auth.id != null && auth.id == data.fromUserId && ${createsInOwnHousehold} && ${validAmount}`,
       update: 'false',
       delete: "auth.id in data.ref('fromUser.id')",
     },
@@ -125,7 +163,7 @@ const rules = {
   pantryItems: {
     allow: {
       view: memberOfHousehold,
-      create: memberOfHousehold,
+      create: createsInOwnHousehold,
       update: memberOfHousehold,
       delete: memberOfHousehold,
     },
@@ -134,18 +172,18 @@ const rules = {
   purchases: {
     allow: {
       view: memberOfHousehold,
-      create: memberOfHousehold,
+      create: createsInOwnHousehold,
       update: 'false',
       delete: 'false',
     },
   },
 
-  // Tasks. Chores are seeded in the SAME transaction that creates the home's
-  // owner membership, so create also accepts the household creator.
+  // Tasks. Seed chores are committed in their own transaction AFTER the owner
+  // membership exists (see household.tsx), so createsInOwnHousehold holds.
   chores: {
     allow: {
       view: memberOfHousehold,
-      create: `${memberOfHousehold} || ${creatorOfHousehold}`,
+      create: createsInOwnHousehold,
       update: memberOfHousehold,
       delete: memberOfHousehold,
     },
@@ -154,9 +192,52 @@ const rules = {
   choreEvents: {
     allow: {
       view: "auth.id in data.ref('chore.household.memberships.user.id')",
-      create: "auth.id in data.ref('chore.household.memberships.user.id')",
+      create: createsInOwnHousehold,
       update: 'false',
       delete: 'false',
+    },
+  },
+
+  // Bill templates — same trust level as expenses; the stamped expense rows
+  // are what the ledger actually reads.
+  bills: {
+    allow: {
+      view: memberOfHousehold,
+      create: `${createsInOwnHousehold} && ${validAmount}`,
+      update: memberOfHousehold,
+      delete: memberOfHousehold,
+    },
+  },
+
+  // Calendar events — house-shared, any member may add or remove.
+  events: {
+    allow: {
+      view: memberOfHousehold,
+      create: createsInOwnHousehold,
+      update: memberOfHousehold,
+      delete: memberOfHousehold,
+    },
+  },
+
+  // Receipt photos — the PHOTO is immutable ($files has no delete), but the
+  // row takes member edits: itemize attaches the stamped expense post-create.
+  receipts: {
+    allow: {
+      view: memberOfHousehold,
+      create: createsInOwnHousehold,
+      update: memberOfHousehold,
+      delete: memberOfHousehold,
+    },
+  },
+
+  // Personal heads-ups — only the recipient can read or dismiss; any
+  // housemate may create one (that's the point: "I got it, no need").
+  nudges: {
+    allow: {
+      view: 'auth.id == data.toUserId',
+      create: createsInOwnHousehold,
+      update: 'auth.id == data.toUserId',
+      delete: 'auth.id == data.toUserId',
     },
   },
 
@@ -165,7 +246,7 @@ const rules = {
   personalTasks: {
     allow: {
       view: 'isOwner',
-      create: 'isOwner',
+      create: 'auth.id != null && auth.id == data.ownerId',
       update: 'isOwner',
       delete: 'isOwner',
     },
