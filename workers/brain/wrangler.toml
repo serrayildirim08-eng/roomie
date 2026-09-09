@@ -6,6 +6,10 @@
 # Secrets (wrangler secret put):
 #   GROQ_API_KEY  — primary classifier (gpt-oss-120b, JSON mode)
 #   CLERK_ISSUER  — Roomie's Clerk instance (JWT verify)
+#   USER_HASH_SALT       — telemetry: salts the SHA-256 user hash (/ingest-event);
+#                          any stable secret string, set once and never rotate
+#   SUPABASE_URL         — telemetry: Ollie's Supabase project URL
+#   SUPABASE_SERVICE_KEY — telemetry: Ollie's Supabase service-role key
 # Fallback model is Cloudflare Workers AI (binding below, no key needed).
 
 name = "roomie-brain"
